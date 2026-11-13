@@ -887,6 +887,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
             const dur = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : o.duration
             const seekTarget = dur > 0 ? local % dur : 0
             const tolerance = isActive ? 0.3 : 0.06
+            el.muted = o.muted === true
             if (Math.abs(el.currentTime - seekTarget) > tolerance) {
               try {
                 el.currentTime = Math.max(0, seekTarget)
@@ -1102,9 +1103,16 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
     const started = useVideoEditor.getState()
     started.setPlaying(false)
     seekTo(0)
-    const audioElements = [videoARef.current, videoBRef.current, musicRef.current].filter(
-      (el): el is HTMLMediaElement => el !== null && el !== undefined,
-    )
+    const audioElements = [
+      videoARef.current,
+      videoBRef.current,
+      musicRef.current,
+      // Multi-track: unmuted overlay video layers contribute their own audio.
+      ...overlaysRef.current
+        .filter((o) => o.kind === 'video' && o.muted !== true)
+        .map((o) => overlayEls.current.get(o.id))
+        .filter((el): el is HTMLVideoElement => el instanceof HTMLVideoElement),
+    ].filter((el): el is HTMLMediaElement => el !== null && el !== undefined)
     const run = (): Promise<void> =>
       new Promise<void>((resolve) => {
         exportDone.current = resolve
@@ -1265,7 +1273,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
               }}
               className="pointer-events-none absolute left-0 top-0 h-1 w-1 opacity-0"
               playsInline
-              muted
+              muted={o.muted === true}
               loop
               preload="auto"
               aria-hidden

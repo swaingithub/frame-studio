@@ -145,6 +145,8 @@ interface VideoState {
   setOverlayText: (id: string, text: string) => void
   /** Sets an overlay's intro/outro motion preset (one undo entry). */
   setOverlayAnim: (id: string, which: 'in' | 'out', preset: OverlayAnimPreset) => void
+  /** Mutes/unmutes a media overlay's own audio (one undo entry). */
+  setOverlayMuted: (id: string, muted: boolean) => void
   /** Replaces every auto-caption overlay with `segments` (one undo entry). */
   addCaptions: (segments: readonly CaptionSegment[]) => void
   /** Removes all auto-caption overlays (one undo entry). */
@@ -809,6 +811,17 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
         : { ...overlay, animOut: preset }
       const overlaysNext = get().overlays.map((o) => (o.id === id ? next : o))
       recordHistory(which === 'in' ? 'In animation' : 'Out animation', before, snap({ overlays: overlaysNext }))
+      set({ overlays: overlaysNext, revision: get().revision + 1 })
+      persist(get().sequence, get().music, get().activeClipId, overlaysNext)
+    },
+
+    setOverlayMuted: (id, muted) => {
+      const overlay = get().overlays.find((o) => o.id === id)
+      if (!overlay || overlay.kind !== 'video') return
+      const before = snap()
+      const next: OverlayClip = { ...overlay, muted }
+      const overlaysNext = get().overlays.map((o) => (o.id === id ? next : o))
+      recordHistory(muted ? 'Mute layer audio' : 'Unmute layer audio', before, snap({ overlays: overlaysNext }))
       set({ overlays: overlaysNext, revision: get().revision + 1 })
       persist(get().sequence, get().music, get().activeClipId, overlaysNext)
     },

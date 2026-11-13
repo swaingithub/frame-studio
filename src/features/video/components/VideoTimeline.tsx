@@ -4,8 +4,9 @@ import { cn } from '../../../lib/cn'
 import { formatDuration } from '../../../core/format'
 import { useVideoEditor, layoutOf } from '../store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
-import { MIN_OVERLAY_OUT, TRANSITION_LABELS, type VideoClip, type VideoTransition } from '../sequenceModel'
+import { TRANSITION_LABELS, type VideoClip, type VideoTransition } from '../sequenceModel'
 import { Tooltip } from '../../../ui/tooltip'
+import { OverlayLaneRow } from './OverlayLaneRow'
 
 /**
  * The sequence timeline: each clip is a proportional segment (trimmed length
@@ -36,15 +37,15 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   const removeClip = useVideoEditor((s) => s.removeClip)
   const setActiveClip = useVideoEditor((s) => s.setActiveClip)
   const reorderClip = useVideoEditor((s) => s.reorderClip)
+  const setOverlayMuted = useVideoEditor((s) => s.setOverlayMuted)
   const assets = useAssets()
 
   const layout = useMemo(() => layoutOf(clips, durations), [clips, durations])
   const total = Math.max(0.0001, layout.total)
+  const textOverlays = useMemo(() => overlays.filter((o) => o.kind === 'text'), [overlays])
+  const mediaOverlays = useMemo(() => overlays.filter((o) => o.kind !== 'text'), [overlays])
   const trackRef = useRef<HTMLDivElement>(null)
-  const laneRef = useRef<HTMLDivElement>(null)
   const dragMode = useRef<'scrub' | 'start' | 'end'>('scrub')
-  // Overlay block drag: move / trims committed continuously, one undo per gesture.
-  const ovDrag = useRef<{ id: string; mode: 'move' | 'start' | 'end'; startX: number; grabOffset: number; origStart: number; origDur: number; moved: boolean } | null>(null)
   // Clip drag-reorder on the base track (grab the block and move it).
   const segDrag = useRef<{ id: string; grabOffset: number; mids: { id: string; mid: number }[]; moved: boolean; lastTo: number } | null>(null)
 
@@ -89,26 +90,6 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       if (d && d.id === entry.clip.id && !d.moved) setActiveClip(entry.clip.id)
     },
     [setActiveClip],
-  )
-
-  const laneTime = useCallback(
-    (clientX: number): number => {
-      const el = laneRef.current
-      if (!el || total <= 0) return 0
-      const rect = el.getBoundingClientRect()
-      return Math.max(0, ((clientX - rect.left) / Math.max(1, rect.width)) * total)
-    },
-    [total],
-  )
-
-  const snapTime = useCallback(
-    (t: number): number => {
-      // Magnetic targets: the playhead and the sequence start.
-      if (Math.abs(t - currentTime) < 0.18) return currentTime > 0 ? currentTime : 0
-      if (Math.abs(t) < 0.18) return 0
-      return Math.round(t * 20) / 20
-    },
-    [currentTime],
   )
 
   const timeAt = useCallback(
@@ -285,151 +266,54 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         />
       </div>
 
-      {/* Overlay lane: layers above the base track (same time scale). */}
-      {overlays.length > 0 ? (
-        <div
-          ref={laneRef}
-          className="relative h-6 min-w-0 touch-none select-none rounded-md bg-elevated/60"
-          role="slider"
-          aria-label="Overlay layers playhead"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(total * 100) / 100}
-          aria-valuenow={Math.round(Math.min(currentTime, total) * 10) / 10}
-          tabIndex={0}
-          onPointerDown={(e) => {
-            if (e.button !== 0) return
-            setActiveOverlay(null)
-            onSeek(timeAt(e.clientX))
-          }}
-          aria-orientation="horizontal"
-        >
-          {overlays.map((o, index) => {
-            const selected = o.id === activeOverlayId
-            return (
-              <div
-                key={o.id}
-                className={cn(
-                  'group absolute inset-y-0 z-10 flex items-center gap-1 overflow-hidden rounded border px-1.5',
-                  selected ? 'border-accent ring-1 ring-accent bg-accent/20' : 'border-line bg-panel/85',
-                  'cursor-move',
-                )}
-                style={{
-                  left: `${(o.start / total) * 100}%`,
-                  width: `${Math.max(0.8, (o.duration / total) * 100)}%`,
-                  zIndex: 10 + index,
-                }}
-                onPointerDown={(e) => {
-                  e.stopPropagation()
-                  try {
-                    e.currentTarget.setPointerCapture(e.pointerId)
-                  } catch {
-                    // synthetic or already-released pointers
-                  }
-                  setActiveOverlay(o.id)
-                  ovDrag.current = {
-                    id: o.id,
-                    mode: 'move',
-                    startX: e.clientX,
-                    grabOffset: laneTime(e.clientX) - o.start,
-                    origStart: o.start,
-                    origDur: o.duration,
-                    moved: false,
-                  }
-                }}
-                onPointerMove={(e) => {
-                  const d = ovDrag.current
-                  if (!d || d.id !== o.id) return
-                  if (!d.moved && Math.abs(e.clientX - d.startX) < 4) return
-                  d.moved = true
-                  const t = laneTime(e.clientX)
-                  if (d.mode === 'move') {
-                    setOverlayTiming(o.id, snapTime(Math.max(0, t - d.grabOffset)), d.origDur)
-                  } else if (d.mode === 'end') {
-                    setOverlayTiming(o.id, d.origStart, Math.max(MIN_OVERLAY_OUT, snapTime(t - d.origStart)))
-                  } else {
-                    const end = d.origStart + d.origDur
-                    const newStart = Math.max(0, Math.min(snapTime(t), end - MIN_OVERLAY_OUT))
-                    setOverlayTiming(o.id, newStart, end - newStart)
-                  }
-                }}
-                onPointerUp={(e) => {
-                  const d = ovDrag.current
-                  ovDrag.current = null
-                  try {
-                    e.currentTarget.releasePointerCapture(e.pointerId)
-                  } catch {
-                    // synthetic or already-released pointers
-                  }
-                  if (!d || !d.moved) onSeek(Math.min(Math.max(o.start, currentTime), o.start + o.duration))
-                }}
-                role="button"
-                aria-label={`Overlay ${index + 1}: ${o.kind === 'text' ? o.text : o.kind}${selected ? ' (selected)' : ''}`}
-                title={o.kind === 'text' ? o.text : o.kind}
-              >
-                {/* Edge handles: drag to trim the layer's window */}
-                <span
-                  data-overlay-handle="start"
-                  className="fs-trim-handle absolute inset-y-0 left-0 w-1.5 cursor-ew-resize touch-none bg-white/0 group-hover:bg-white/30"
-                  aria-hidden
-                  onPointerDown={(e) => {
-                    e.stopPropagation()
-                    try {
-                      e.currentTarget.setPointerCapture(e.pointerId)
-                    } catch {
-                      // ignore — segment handlers still see moves via bubbling
-                    }
-                    setActiveOverlay(o.id)
-                    ovDrag.current = { id: o.id, mode: 'start', startX: e.clientX, grabOffset: 0, origStart: o.start, origDur: o.duration, moved: false }
-                  }}
-                />
-                <span
-                  data-overlay-handle="end"
-                  className="fs-trim-handle absolute inset-y-0 right-0 w-1.5 cursor-ew-resize touch-none bg-white/0 group-hover:bg-white/30"
-                  aria-hidden
-                  onPointerDown={(e) => {
-                    e.stopPropagation()
-                    try {
-                      e.currentTarget.setPointerCapture(e.pointerId)
-                    } catch {
-                      // ignore — segment handlers still see moves via bubbling
-                    }
-                    setActiveOverlay(o.id)
-                    ovDrag.current = { id: o.id, mode: 'end', startX: e.clientX, grabOffset: 0, origStart: o.start, origDur: o.duration, moved: false }
-                  }}
-                />
-                <span className="truncate text-[9px] font-medium text-hi" aria-hidden>
-                  {o.kind === 'text' ? o.text : o.kind === 'video' ? '▶ Video' : '🖼 Image'}
-                </span>
-                {selected ? (
-                  <button
-                    type="button"
-                    className="absolute right-0.5 top-0 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-black/60 text-hi/90 hover:bg-black/80"
-                    aria-label="Delete overlay"
-                    onPointerDown={(e) => {
-                      e.stopPropagation()
-                      removeOverlay(o.id)
-                    }}
-                  >
-                    <Trash2 size={8} />
-                  </button>
-                ) : null}
-              </div>
-            )
-          })}
-          {/* Playhead (mirrors the base track) */}
-          <div
-            className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-white/90"
-            style={{ left: `${(Math.min(currentTime, total) / total) * 100}%` }}
-            aria-hidden
-          />
-        </div>
+      {/* Overlay track lanes: text layers share one lane; every media layer
+          gets its own stacked lane (multi-track, CapCut-style). */}
+      {textOverlays.length > 0 ? (
+        <OverlayLaneRow
+          laneLabel="Text overlays"
+          overlays={textOverlays}
+          total={total}
+          currentTime={currentTime}
+          onSeek={onSeek}
+          selectedId={activeOverlayId}
+          onSelect={setActiveOverlay}
+          onRemove={removeOverlay}
+          onTiming={setOverlayTiming}
+        />
       ) : null}
+      {mediaOverlays.map((o) => {
+        const asset = assets?.find((a) => a.id === o.assetId)
+        return (
+          <OverlayLaneRow
+            key={o.id}
+            laneLabel={`${o.kind === 'video' ? 'Video' : 'Image'} layer — ${asset?.name ?? ''}`}
+            overlays={[o]}
+            total={total}
+            currentTime={currentTime}
+            onSeek={onSeek}
+            selectedId={activeOverlayId}
+            onSelect={setActiveOverlay}
+            onRemove={removeOverlay}
+            onTiming={setOverlayTiming}
+            onToggleMute={(id) => setOverlayMuted(id, !(overlays.find((o) => o.id === id)?.muted ?? false))}
+            chipThumb={(layer) => <LaneThumb assetId={layer.assetId} />}
+          />
+        )
+      })}
     </div>
   )
 }
 
 const toolBtn =
   'fs-tool-hit flex h-6 w-6 items-center justify-center rounded-md text-hi/80 text-lo hover:bg-hover hover:text-hi disabled:opacity-30'
+
+/** Small thumbnail for a media layer's timeline chip. */
+function LaneThumb({ assetId }: { assetId?: string }): ReactNode {
+  const asset = useAssets()?.find((a) => a.id === assetId) ?? null
+  const thumb = useThumbnail(asset)
+  if (!thumb) return null
+  return <img src={thumb} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" aria-hidden />
+}
 
 /** Family glyph shown on the clip's transition badge. */
 function TransitionIcon({ type }: { type: VideoTransition }): ReactNode {
