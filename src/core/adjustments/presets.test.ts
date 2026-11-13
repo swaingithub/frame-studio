@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ADJUSTMENTS_BY_KEY, defaultAdjustments } from './registry'
-import { PRESETS, autoValues, presetValues, statsFromHistogram } from './presets'
+import { PRESETS, autoValues, mixValues, presetValues, statsFromHistogram } from './presets'
 
 describe('presets', () => {
   it('produces valid full adjustment sets within param ranges', () => {
@@ -98,5 +98,26 @@ describe('autoValues', () => {
     expect(values.whites).toBeLessThan(0)
     expect(values.exposure).toBeLessThanOrEqual(60)
     expect(values.exposure).toBeGreaterThanOrEqual(-60)
+  })
+})
+
+describe('mixValues (look strength)', () => {
+  it('strength 0 = neutral defaults, 1 = full preset', () => {
+    const preset = PRESETS.find((p) => p.id === 'vivid')!
+    expect(mixValues(preset, 0)).toEqual(defaultAdjustments())
+    expect(mixValues(preset, 1)).toEqual(presetValues(preset))
+  })
+
+  it('strength 0.5 lands halfway for preset keys', () => {
+    const preset = PRESETS.find((p) => p.id === 'vivid')!
+    const mixed = mixValues(preset, 0.5)
+    const full = presetValues(preset)
+    const def = defaultAdjustments()
+    for (const [key, value] of Object.entries(full)) {
+      const k = key as keyof typeof full
+      if (value !== def[k]) {
+        expect(mixed[k]).toBeCloseTo((def[k] + value) / 2, 0)
+      }
+    }
   })
 })

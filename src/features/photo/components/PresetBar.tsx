@@ -21,7 +21,7 @@ import { cn } from '../../../lib/cn'
  */
 
 export interface PresetBarProps {
-  onApply: (values: Partial<AdjustValues>, label: string) => void
+  onApply: (values: Partial<AdjustValues>, label: string, lookId?: string) => void
   /** Stats for the Auto heuristic; omit to disable Auto. */
   stats?: HistogramStats | null
   /** Preview bitmap to render live preset thumbnails; omit for text chips. */
@@ -92,7 +92,7 @@ function PresetChip({
       label={preset.label}
       description={preset.description}
       values={values}
-      onClick={() => onApply(values, preset.label)}
+      onClick={() => onApply(values, preset.label, preset.id)}
       source={source}
       sourceKey={sourceKey}
     />

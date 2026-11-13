@@ -64,10 +64,11 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
 
       <PresetBar
         stats={stats}
-        onApply={(values, label) => editor.applyAdjustments(values, label)}
+        onApply={(values, label, lookId) => editor.applyAdjustments(values, label, lookId)}
         source={source}
         sourceKey={photoId ?? undefined}
       />
+      <LookStrength />
 
       {ADJUSTMENT_SECTIONS.map((section) => {
         const params = ADJUSTMENTS.filter((p) => p.section === section)
@@ -194,6 +195,25 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
         <HistoryList />
       </section>
     </div>
+  )
+}
+
+/** Strength dial for the active look: re-mixes adjustments from the preset. */
+function LookStrength(): ReactNode {
+  const look = usePhotoEditor((s) => s.doc?.look ?? null)
+  const editor = usePhotoEditor()
+  if (!look) return null
+  return (
+    <AdjustSlider
+      param={{ label: 'Look strength', min: 0, max: 1, def: 1, step: 0.01 }}
+      value={look.strength}
+      onLive={(v) => editor.setLookStrength(v)}
+      onCommit={() => editor.commit('Look strength')}
+      onReset={() => {
+        editor.setLookStrength(1)
+        editor.commit('Look strength')
+      }}
+    />
   )
 }
 

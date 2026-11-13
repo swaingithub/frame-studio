@@ -9,6 +9,8 @@ export interface Toast {
   kind: ToastKind
   title: string
   detail?: string
+  /** Optional thumbnail URL (e.g. export result preview). */
+  image?: string
 }
 
 interface ToastState {
@@ -42,6 +44,6 @@ export const useToastStore = create<ToastState>()((set) => ({
 }))
 
 /** Imperative helper: fire a toast from stores or event handlers. */
-export function toast(title: string, detail?: string, kind: ToastKind = 'info'): void {
-  useToastStore.getState().push({ title, detail, kind })
+export function toast(title: string, detail?: string, kind: ToastKind = 'info', image?: string): void {
+  useToastStore.getState().push({ title, detail, kind, image })
 }

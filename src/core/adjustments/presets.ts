@@ -79,6 +79,22 @@ export function presetValues(preset: AdjustPreset): AdjustValues {
   return base
 }
 
+/**
+ * A preset dialled back to `strength` (0..1): every preset key lerps between
+ * the neutral default and the full preset value. Lets users dial a look
+ * up/down after applying it.
+ */
+export function mixValues(preset: AdjustPreset, strength: number): AdjustValues {
+  const base = defaultAdjustments()
+  const t = Math.min(1, Math.max(0, strength))
+  for (const [key, value] of Object.entries(preset.values)) {
+    const k = key as keyof AdjustValues
+    const full = clampKey(k, value as number)
+    base[k] = clampKey(k, base[k] + (full - base[k]) * t)
+  }
+  return base
+}
+
 /** Mean luma, 0..1. */
 export interface HistogramStats {
   mean: number

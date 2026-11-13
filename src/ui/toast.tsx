@@ -26,7 +26,11 @@ export function Toaster(): ReactNode {
           key={t.id}
           className="fs-anim-toast-in pointer-events-auto flex items-start gap-2.5 rounded-lg border border-line bg-elevated p-3 shadow-xl"
         >
-          <span className="mt-0.5 shrink-0">{icons[t.kind]}</span>
+          {t.image ? (
+            <img src={t.image} alt="" className="h-11 w-11 shrink-0 rounded border border-line object-cover" />
+          ) : (
+            <span className="mt-0.5 shrink-0">{icons[t.kind]}</span>
+          )}
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium text-hi">{t.title}</p>
             {t.detail ? <p className="mt-0.5 whitespace-pre-line break-words text-xs text-lo">{t.detail}</p> : null}

@@ -290,7 +290,7 @@ export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode
               onClick={() => pickAspect(a.label, a.ratio, a.kind)}
               aria-pressed={aspectLabel === a.label}
               className={cn(
-                'h-7 rounded-md px-2 text-xs font-medium transition-colors',
+                'fs-aspect-chip h-7 rounded-md px-2 text-xs font-medium transition-colors',
                 aspectLabel === a.label
                   ? 'bg-accent-soft text-hi ring-1 ring-accent/60'
                   : 'bg-elevated text-lo hover:text-hi',
@@ -304,10 +304,10 @@ export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode
           {Math.round(rect.w * 1000) / 10}% × {Math.round(rect.h * 1000) / 10}%
         </span>
         <div className="mx-1 h-5 w-px bg-line" />
-        <Button size="sm" variant="ghost" onClick={cancelCrop} aria-label="Cancel crop">
+        <Button size="sm" variant="ghost" className="fs-crop-commit" onClick={cancelCrop} aria-label="Cancel crop">
           <X size={13} />
         </Button>
-        <Button size="sm" variant="primary" onClick={applyCrop} aria-label="Apply crop">
+        <Button size="sm" variant="primary" className="fs-crop-commit" onClick={applyCrop} aria-label="Apply crop">
           <Check size={13} />
           Apply
         </Button>

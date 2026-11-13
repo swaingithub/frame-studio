@@ -47,7 +47,16 @@ export interface EditDoc {
   mask?: Mask | null
   /** Decorative text layers (photo only), bottom→top in array order. */
   textOverlays?: PhotoTextOverlay[]
+  /** Which one-click look is active and its dialled strength (photo only). */
+  look?: LookRef | null
   schemaVersion: number
+}
+
+/** Active preset look reference — values live in `adjustments`. */
+export interface LookRef {
+  id: string
+  /** 0..1 mix from neutral defaults to the full preset. */
+  strength: number
 }
 
 /** One draggable text layer on a photo. Position in output UV (0..1, y-down). */
@@ -316,6 +325,19 @@ export function sanitizeTextOverlay(raw: unknown): PhotoTextOverlay | null {
   }
 }
 
+/** Repairs a stored look reference (null = none). */
+export function sanitizeLook(raw: unknown): LookRef | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const rec = raw as Record<string, unknown>
+  const id = typeof rec.id === 'string' && rec.id ? rec.id.slice(0, 40) : ''
+  if (!id) return null
+  const strength =
+    typeof rec.strength === 'number' && Number.isFinite(rec.strength)
+      ? Math.min(1, Math.max(0, rec.strength))
+      : 1
+  return { id, strength }
+}
+
 /** Repairs the whole overlay list. */
 export function sanitizeTextOverlays(raw: unknown): PhotoTextOverlay[] {
   if (!Array.isArray(raw)) return []
@@ -382,6 +404,7 @@ export function sanitizeEditDoc(raw: unknown): EditDoc {
   safe.chromaKey = rec.chromaKey === undefined || rec.chromaKey === null ? null : sanitizeChromaKey(rec.chromaKey)
   safe.mask = rec.mask === undefined || rec.mask === null ? null : sanitizeMask(rec.mask)
   safe.textOverlays = sanitizeTextOverlays(rec.textOverlays)
+  safe.look = sanitizeLook(rec.look)
   safe.curves = rec.curves === undefined ? defaultToneCurve() : sanitizeToneCurve(rec.curves)
   safe.hsl = rec.hsl === undefined ? defaultHslMixer() : sanitizeHslMixer(rec.hsl)
   return safe

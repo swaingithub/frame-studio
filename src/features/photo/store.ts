@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useProjectsStore } from '../projects/store'
+import { PRESETS, mixValues } from '../../core/adjustments/presets'
 import {
   createDefaultEditDoc,
   sanitizeEditDoc,
@@ -69,7 +70,9 @@ interface PhotoEditorState {
   setCropAspect: (aspect: number | null) => void
   applyCrop: () => void
   /** One-click looks & Auto: apply a whole adjustment set as one entry. */
-  applyAdjustments: (values: Partial<AdjustValues>, label: string) => void
+  applyAdjustments: (values: Partial<AdjustValues>, label: string, lookId?: string) => void
+  /** Dials the active look's strength (0..1). */
+  setLookStrength: (strength: number) => void
   /** Live tone-curve knot / parametric drag. */
   setCurveLive: (patch: Partial<ToneCurve>) => void
   /** Live HSL band drag. */
@@ -134,9 +137,9 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     const current = get().pendingBefore ?? doc
     if (!get().pendingBefore) set({ pendingBefore: doc })
     const next = withAdjustment(current, key, clamped)
-    set({ doc: next })
+    set({ doc: { ...next, look: null } })
     const photoId = currentPhotoId()
-    if (photoId) writeDocToProject(photoId, next)
+    if (photoId) writeDocToProject(photoId, { ...next, look: null })
   },
 
   commit: (label) => {
@@ -304,14 +307,33 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
   },
 
   /** One-click looks & Auto: apply a whole adjustment set as one entry. */
-  applyAdjustments: (values, label) => {
+  applyAdjustments: (values, label, lookId) => {
     const doc = get().doc
     const photoId = currentPhotoId()
     if (!doc || !photoId) return
-    const next = withAdjustments(doc, values)
+    const next = { ...withAdjustments(doc, values), look: lookId ? { id: lookId, strength: 1 } : null }
     get().history.record(photoId, label, doc, next)
     writeDocToProject(photoId, next)
     set({ doc: next, revision: get().revision + 1 })
+  },
+
+  /** Dials the active look's strength; recomputes adjustments from the preset. */
+  setLookStrength: (strength) => {
+    const doc = get().doc
+    const photoId = currentPhotoId()
+    if (!doc || !photoId || !doc.look) return
+    const preset = PRESETS.find((p) => p.id === doc.look?.id)
+    if (!preset) return
+    const clamped = Math.min(1, Math.max(0, strength))
+    // Gesture pattern: first live call remembers the base for one history entry.
+    const current = get().pendingBefore ?? doc
+    if (!get().pendingBefore) set({ pendingBefore: doc })
+    const next = {
+      ...withAdjustments(current, mixValues(preset, clamped)),
+      look: { id: doc.look.id, strength: clamped },
+    }
+    set({ doc: next })
+    writeDocToProject(photoId, next)
   },
 
   undo: () => {

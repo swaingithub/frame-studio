@@ -3,7 +3,7 @@ import { Download, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { Button } from '../../../ui/button'
 import { toast } from '../../../ui/toastStore'
-import { exportPhoto, renderPhotoBlob, sanitizeFileName, toPngBlob, downloadBlob, type ExportFormat } from '../exportPhoto'
+import { renderPhotoBlob, sanitizeFileName, toPngBlob, downloadBlob, type ExportFormat } from '../exportPhoto'
 import { getFullSource, loadSource } from './EditorCanvas'
 import { usePhotoEditor } from '../store'
 import { Share2 } from 'lucide-react'
@@ -47,13 +47,16 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
         full = entry.full
       }
       if (!full) throw new Error('Source is no longer available')
-      const name = await exportPhoto(full, doc, {
+      const { name, blob: outBlob } = await renderPhotoBlob(full, doc, {
         format,
         quality,
         maxEdge,
         baseName: sanitizeFileName(asset.name),
       })
-      toast('Export complete', name, 'success')
+      downloadBlob(outBlob, name)
+      const previewUrl = URL.createObjectURL(outBlob)
+      window.setTimeout(() => URL.revokeObjectURL(previewUrl), 6000)
+      toast('Export complete', name, 'success', previewUrl)
       onClose()
     } catch (err) {
       toast('Export failed', err instanceof Error ? err.message : String(err), 'error')
