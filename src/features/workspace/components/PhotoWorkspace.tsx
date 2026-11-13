@@ -151,7 +151,7 @@ function FilmstripItem({
       <button
         type="button"
         aria-label={`Remove ${asset.name} from project`}
-        className="absolute left-1 top-1 hidden rounded bg-black/55 p-0.5 text-white hover:bg-black/75 group-hover:block"
+        className="fs-thumb-remove absolute left-1 top-1 hidden rounded bg-black/55 p-0.5 text-white hover:bg-black/75 group-hover:block"
         onClick={(e) => {
           e.stopPropagation()
           onRemove()

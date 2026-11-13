@@ -193,6 +193,11 @@
   .fs-trim-handle {
     width: 1.25rem;
   }
+  /* Filmstrip remove button: never hide it behind hover on touch. */
+  .fs-thumb-remove {
+    display: block !important;
+    padding: 0.375rem;
+  }
   /* Crop toolbar: bigger aspect chips + Apply/Cancel on touch. */
   .fs-aspect-chip {
     min-height: 2.25rem;

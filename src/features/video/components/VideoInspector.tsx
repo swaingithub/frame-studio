@@ -15,6 +15,7 @@ import { DEFAULT_CHROMA_COLOR, MASK_SHAPES, MASK_SHAPE_LABELS, defaultMask, type
 import { SPEED_CURVES, SPEED_CURVE_LABELS, type VideoEditDoc } from '../model'
 import { cn } from '../../../lib/cn'
 import { MusicLibraryDialog } from './MusicLibraryDialog'
+import { useClipFrame } from '../clipFrame'
 
 /**
  * Right-hand inspector for the video workspace: shared Looks (presets &
@@ -94,6 +95,7 @@ export function VideoInspectorBody({ histogram }: { histogram: Histogram | null 
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
   const stats = histogram ? statsFromHistogram(histogram.l, histogram.samples) : null
+  const clipFrame = useClipFrame(clip?.id ?? null, clip?.assetId ?? null)
   const musicSection = <MusicSection />
   const canvasSection = <CanvasControls />
   const historySection = (
@@ -146,7 +148,12 @@ export function VideoInspectorBody({ histogram }: { histogram: Histogram | null 
 
       <HistogramView histogram={histogram} />
 
-      <PresetBar stats={stats} onApply={applyAdjustments} />
+      <PresetBar
+        stats={stats}
+        onApply={applyAdjustments}
+        source={clipFrame}
+        sourceKey={clip?.id}
+      />
 
       <VideoLookStrength />
 
