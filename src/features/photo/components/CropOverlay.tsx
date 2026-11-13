@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Check, X } from 'lucide-react'
 import { usePhotoEditor } from '../store'
 import { Button } from '../../../ui/button'
@@ -45,13 +45,15 @@ const HANDLES: Array<{ dir: Dir; cursor: string; style: CSSProperties }> = [
 const ASPECTS: Array<{ label: string; ratio: number | null; kind: 'ratio' | 'frame' }> = [
   { label: 'Free', ratio: null, kind: 'ratio' },
   { label: 'Frame', ratio: 0, kind: 'frame' },
+  { label: '9:16', ratio: 9 / 16, kind: 'ratio' },
   { label: '1:1', ratio: 1, kind: 'ratio' },
+  { label: '4:5', ratio: 4 / 5, kind: 'ratio' },
+  { label: '16:9', ratio: 16 / 9, kind: 'ratio' },
   { label: '4:3', ratio: 4 / 3, kind: 'ratio' },
   { label: '3:4', ratio: 3 / 4, kind: 'ratio' },
   { label: '3:2', ratio: 3 / 2, kind: 'ratio' },
   { label: '2:3', ratio: 2 / 3, kind: 'ratio' },
-  { label: '16:9', ratio: 16 / 9, kind: 'ratio' },
-  { label: '9:16', ratio: 9 / 16, kind: 'ratio' },
+  { label: '5:4', ratio: 5 / 4, kind: 'ratio' },
 ]
 
 export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode {
@@ -63,7 +65,23 @@ export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode
 
   const boxRef = useRef<HTMLDivElement>(null)
   const dragRef = useRef<DragState | null>(null)
-  const [aspectLabel, setAspectLabel] = useState('Free')
+  const [aspectLabel, setAspectLabel] = useState(() => {
+    const locked = crop?.aspect
+    if (!locked) return 'Free'
+    const match = ASPECTS.find((a) => a.ratio !== null && Math.abs(a.ratio - locked) < 1e-4)
+    return match?.label ?? 'Free'
+  })
+
+  // Pre-fit the draft when crop mode opens with a preset aspect (quick frames).
+  useEffect(() => {
+    const value = crop?.aspect
+    if (value && frameAspect > 0) {
+      const w = frameAspect >= value ? 1 : frameAspect / value
+      const h = frameAspect >= value ? value / frameAspect : 1
+      setCropDraft({ x: (1 - w) / 2, y: (1 - h) / 2, w, h })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only pre-fit
+  }, [])
 
   if (!crop) return null
   const rect = crop.draft
@@ -73,6 +91,13 @@ export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode
     const value = kind === 'frame' ? frameAspect : ratio
     setAspectLabel(label)
     setCropAspect(value)
+    // Snap the draft to the largest centered rect at this aspect so the
+    // frame is immediately visible (one tap, no dragging needed).
+    if (value && value > 0 && frameAspect > 0) {
+      const w = frameAspect >= value ? 1 : frameAspect / value
+      const h = frameAspect >= value ? value / frameAspect : 1
+      setCropDraft({ x: (1 - w) / 2, y: (1 - h) / 2, w, h })
+    }
   }
 
   function beginDrag(dir: Dir, e: ReactPointerEvent<HTMLDivElement>): void {
@@ -256,23 +281,25 @@ export function CropOverlay({ frameAspect }: { frameAspect: number }): ReactNode
       </div>
 
       {/* Toolbar */}
-      <div className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-line bg-panel/95 p-1.5 shadow-xl backdrop-blur">
-        <select
-          value={aspectLabel}
-          onChange={(e) => {
-            const entry = ASPECTS.find((a) => a.label === e.target.value)
-            if (!entry) return
-            pickAspect(entry.label, entry.ratio, entry.kind)
-          }}
-          aria-label="Aspect ratio"
-          className="h-7 rounded-md border border-line bg-elevated px-2 text-xs text-hi outline-none"
-        >
+      <div className="absolute bottom-4 left-1/2 z-30 flex max-w-[calc(100%-1rem)] -translate-x-1/2 flex-wrap items-center justify-center gap-1 rounded-lg border border-line bg-panel/95 p-1.5 shadow-xl backdrop-blur">
+        <div className="flex items-center gap-1" role="group" aria-label="Aspect ratio">
           {ASPECTS.map((a) => (
-            <option key={a.label} value={a.label}>
+            <button
+              key={a.label}
+              type="button"
+              onClick={() => pickAspect(a.label, a.ratio, a.kind)}
+              aria-pressed={aspectLabel === a.label}
+              className={cn(
+                'h-7 rounded-md px-2 text-xs font-medium transition-colors',
+                aspectLabel === a.label
+                  ? 'bg-accent-soft text-hi ring-1 ring-accent/60'
+                  : 'bg-elevated text-lo hover:text-hi',
+              )}
+            >
               {a.label}
-            </option>
+            </button>
           ))}
-        </select>
+        </div>
         <span className="px-1 text-[10px] tabular-nums text-lo">
           {Math.round(rect.w * 1000) / 10}% × {Math.round(rect.h * 1000) / 10}%
         </span>

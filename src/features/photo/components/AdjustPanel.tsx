@@ -28,6 +28,14 @@ const sectionLabels: Record<string, string> = {
   effects: 'Effects',
 }
 
+/** Social-first crop shortcuts (ratio = width / height in output space). */
+const QUICK_FRAMES = [
+  { label: 'Reel 9:16', ratio: 9 / 16, hint: 'Vertical video/story format' },
+  { label: 'Post 1:1', ratio: 1, hint: 'Square feed post' },
+  { label: 'Portrait 4:5', ratio: 4 / 5, hint: 'Portrait feed post' },
+  { label: 'Wide 16:9', ratio: 16 / 9, hint: 'Landscape/thumbnail' },
+]
+
 interface AdjustPanelProps {
   doc: EditDoc | null
   histogram: Histogram | null
@@ -126,10 +134,25 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
           <Button size="icon" variant="subtle" title="Flip vertical" aria-label="Flip vertical" onClick={() => editor.setGeometryRel(0, false, true)}>
             <FlipVertical size={13} />
           </Button>
-          <Button size="sm" variant="subtle" className="ml-auto" onClick={editor.startCrop} disabled={editor.crop !== null}>
+          <Button size="sm" variant="subtle" className="ml-auto" onClick={() => editor.startCrop()} disabled={editor.crop !== null}>
             <Crop size={12} />
             Crop
           </Button>
+        </div>
+        {/* One-tap social frames: opens crop pre-fitted to a popular ratio. */}
+        <div className="flex flex-wrap gap-1" role="group" aria-label="Quick frames">
+          {QUICK_FRAMES.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              disabled={editor.crop !== null}
+              onClick={() => editor.startCrop(q.ratio)}
+              title={q.hint}
+              className="rounded-md border border-line bg-elevated px-2 py-1 text-[11px] font-medium text-lo transition-colors hover:text-hi disabled:opacity-40"
+            >
+              {q.label}
+            </button>
+          ))}
         </div>
         <AdjustSlider
           param={{ label: 'Straighten', min: -45, max: 45, def: 0 }}

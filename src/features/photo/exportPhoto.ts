@@ -26,6 +26,11 @@ export interface ExportOptions {
   baseName: string
 }
 
+export interface ExportResult {
+  name: string
+  blob: Blob
+}
+
 const EXT: Record<ExportFormat, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
@@ -61,8 +66,8 @@ export function sanitizeFileName(name: string): string {
   return name.replace(/\.[a-z0-9]+$/i, '').replace(/[\\/:*?"<>|]+/g, '_')
 }
 
-/** Renders + downloads one photo. Throws on failure (caller toasts). */
-export async function exportPhoto(source: TexSource, doc: EditDoc, options: ExportOptions): Promise<string> {
+/** Renders one photo to a Blob (no download). Throws on failure. */
+export async function renderPhotoBlob(source: TexSource, doc: EditDoc, options: ExportOptions): Promise<ExportResult> {
   const { w: baseW, h: baseH } = { w: sourceWidth(source), h: sourceHeight(source) }
   const plan = planForDoc(baseW, baseH, doc)
   let outW = plan.outW
@@ -111,10 +116,32 @@ export async function exportPhoto(source: TexSource, doc: EditDoc, options: Expo
     if (!blob) throw new Error('Encoding produced no data')
 
     const name = `${sanitizeFileName(options.baseName)}-edited-${outW}x${outH}-${newId('').slice(0, 8)}.${EXT[options.format]}`
-    download(blob, name)
-    return name
+    return { name, blob }
   } finally {
     canvas.width = 0
     canvas.height = 0
   }
+}
+
+/** Renders + downloads one photo. Throws on failure (caller toasts). */
+export async function exportPhoto(source: TexSource, doc: EditDoc, options: ExportOptions): Promise<string> {
+  const { name, blob } = await renderPhotoBlob(source, doc, options)
+  download(blob, name)
+  return name
+}
+
+/** Renders one photo as PNG (for clipboard copies; ignores format/quality). */
+export async function toPngBlob(source: TexSource, doc: EditDoc, options: { quality: number; maxEdge: number | null }): Promise<Blob> {
+  const { blob } = await renderPhotoBlob(source, doc, {
+    format: 'image/png',
+    quality: options.quality,
+    maxEdge: options.maxEdge,
+    baseName: 'clipboard',
+  })
+  return blob
+}
+
+/** Saves a blob to the user's downloads (used by share fallbacks). */
+export function downloadBlob(blob: Blob, name: string): void {
+  download(blob, name)
 }

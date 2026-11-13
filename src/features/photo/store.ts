@@ -63,7 +63,7 @@ interface PhotoEditorState {
   redo: () => void
   jumpTo: (entryId: string) => void
   setBypass: (v: boolean) => void
-  startCrop: () => void
+  startCrop: (aspect?: number | null) => void
   cancelCrop: () => void
   setCropDraft: (rect: CropRect) => void
   setCropAspect: (aspect: number | null) => void
@@ -346,10 +346,10 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
 
   setBypass: (v) => set({ bypass: v }),
 
-  startCrop: () => {
+  startCrop: (aspect) => {
     const doc = get().doc
     if (!doc) return
-    set({ crop: { draft: { ...doc.geometry.crop }, aspect: null } })
+    set({ crop: { draft: { ...doc.geometry.crop }, aspect: aspect ?? null } })
   },
 
   cancelCrop: () => set({ crop: null }),

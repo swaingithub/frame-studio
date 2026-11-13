@@ -3,9 +3,10 @@ import { Download, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { Button } from '../../../ui/button'
 import { toast } from '../../../ui/toastStore'
-import { exportPhoto, sanitizeFileName, type ExportFormat } from '../exportPhoto'
+import { exportPhoto, renderPhotoBlob, sanitizeFileName, toPngBlob, downloadBlob, type ExportFormat } from '../exportPhoto'
 import { getFullSource, loadSource } from './EditorCanvas'
 import { usePhotoEditor } from '../store'
+import { Share2 } from 'lucide-react'
 import { useAssetBlob } from '../../library/useAssets'
 import type { MediaAsset } from '../../../core/db/schema'
 
@@ -61,6 +62,47 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
     }
   }
 
+  /** Native share sheet (phones) with clipboard/download fallbacks. */
+  async function shareExport(): Promise<void> {
+    if (!doc) return
+    setBusy(true)
+    try {
+      let full = getFullSource(asset.id)
+      if (!full && blob) {
+        const entry = await loadSource(asset.id, blob)
+        full = entry.full
+      }
+      if (!full) throw new Error('Source is no longer available')
+      const { name, blob: fileBlob } = await renderPhotoBlob(full, doc, {
+        format,
+        quality,
+        maxEdge,
+        baseName: sanitizeFileName(asset.name),
+      })
+      const file = new File([fileBlob], name, { type: format })
+      const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean; share?: (data: ShareData) => Promise<void> }
+      if (nav.share && nav.canShare?.({ files: [file] })) {
+        await nav.share({ files: [file], title: name })
+        onClose()
+      } else if ('ClipboardItem' in window) {
+        // Clipboard accepts PNG broadly; transcode if needed.
+        const imageBlob = format === 'image/png' ? fileBlob : await toPngBlob(full, doc, { quality, maxEdge })
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': imageBlob })])
+        toast('Copied to clipboard', 'Paste it into any app', 'success')
+        onClose()
+      } else {
+        downloadBlob(fileBlob, name)
+        toast('Sharing not supported here', 'Downloaded instead', 'info')
+        onClose()
+      }
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      toast('Share failed', err instanceof Error ? err.message : String(err), 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (!asset) return null
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? undefined : onClose())}>
@@ -72,6 +114,10 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
             <>
               <Button variant="subtle" onClick={onClose} disabled={busy}>
                 Cancel
+              </Button>
+              <Button variant="subtle" disabled={busy} onClick={() => void shareExport()}>
+                {busy ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+                Share
               </Button>
               <Button variant="primary" disabled={busy} onClick={() => void runExport()}>
                 {busy ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
