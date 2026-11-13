@@ -129,9 +129,11 @@ interface EditorCanvasProps {
   /** Called with a fresh histogram (throttled) after renders. */
   onHistogram?: (h: Histogram | null) => void
   onExport?: () => void
+  /** Hides the floating Compare/Export buttons (mobile bar owns them). */
+  hideActions?: boolean
 }
 
-export function EditorCanvas({ asset, onHistogram, onExport }: EditorCanvasProps): ReactNode {
+export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: EditorCanvasProps): ReactNode {
   const blob = useAssetBlob(asset)
   const doc = usePhotoEditor((s) => s.doc)
   const bypass = usePhotoEditor((s) => s.bypass)
@@ -314,7 +316,7 @@ export function EditorCanvas({ asset, onHistogram, onExport }: EditorCanvasProps
       </div>
 
       {/* Floating stage controls */}
-      <div className="absolute bottom-2 right-2 z-30 flex items-center gap-1 sm:bottom-4 sm:right-4">
+      <div className={cn('absolute bottom-2 right-2 z-30 flex items-center gap-1 sm:bottom-4 sm:right-4', hideActions && 'hidden')}>
         {showFallbackNote ? (
           <Tooltip content="WebGL2 unavailable — using the Canvas 2D fallback. Sharpness, clarity, noise reduction and grain are approximate; geometry is exact.">
             <Button size="icon" variant="ghost" aria-label="Renderer info">

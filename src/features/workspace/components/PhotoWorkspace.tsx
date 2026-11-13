@@ -11,6 +11,8 @@ import { ExportDialog } from '../../photo/components/ExportDialog'
 import { usePhotoEditor } from '../../photo/store'
 import type { Histogram } from '../../../core/render/histogram'
 import { ManageProjectsDialog } from '../../projects/components/Projects'
+import { MobileEditBar } from './MobileEditBar'
+import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
 
 /**
  * Photo workspace (Phase 2): interactive editor canvas with live adjustments,
@@ -26,6 +28,7 @@ export function PhotoWorkspace(): ReactNode {
   const updateCurrent = useProjectsStore((s) => s.updateCurrent)
   const removeAssetFromCurrent = useProjectsStore((s) => s.removeAssetFromCurrent)
   const setActivePhoto = usePhotoEditor((s) => s.setActivePhoto)
+  const phone = useMediaQuery(PHONE_QUERY)
 
   const photos = useMemo(
     () => (assets && project ? assetsByIds(assets, project.photoAssets) : []),
@@ -51,7 +54,12 @@ export function PhotoWorkspace(): ReactNode {
       <div className="relative flex min-h-0 flex-1 items-stretch bg-stage">
         {active ? (
           <>
-            <EditorCanvas asset={active} onHistogram={handleHistogram} onExport={() => setExportOpen(true)} />
+            <EditorCanvas
+              asset={active}
+              onHistogram={handleHistogram}
+              onExport={() => setExportOpen(true)}
+              hideActions={phone}
+            />
             <ExportDialog asset={active} open={exportOpen} onClose={() => setExportOpen(false)} />
           </>
         ) : photos.length === 0 ? (
@@ -68,6 +76,9 @@ export function PhotoWorkspace(): ReactNode {
           </div>
         )}
       </div>
+
+      {/* CapCut-style thumb bar (phones only) */}
+      {phone && active ? <MobileEditBar onExport={() => setExportOpen(true)} /> : null}
 
       {/* Filmstrip */}
       <div className="shrink-0 border-t border-line bg-panel">

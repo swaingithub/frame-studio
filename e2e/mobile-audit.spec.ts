@@ -34,5 +34,16 @@ test('mobile audit screenshots', async ({ page }) => {
       await page.screenshot({ path: `${shots}/04-inspector-sheet.png` })
       await page.keyboard.press('Escape')
     }
+
+    // Mobile bottom bar: Edit sheet + Compare hold
+    const editBtn = page.getByRole('button', { name: 'Edit', exact: true })
+    if (await editBtn.count()) {
+      await editBtn.click()
+      await page.waitForTimeout(800)
+      await page.screenshot({ path: `${shots}/05-mobile-edit-sheet.png` })
+      await page.getByRole('dialog', { name: 'Editing tools' }).getByRole('button', { name: 'Close tools' }).click()
+      await page.waitForTimeout(300)
+      await page.screenshot({ path: `${shots}/06-mobile-bar.png` })
+    }
   }
 })
