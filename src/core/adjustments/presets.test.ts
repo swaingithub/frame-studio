@@ -121,3 +121,21 @@ describe('mixValues (look strength)', () => {
     }
   })
 })
+
+describe('premium restraint (look library)', () => {
+  it('keeps every preset subtle — no channel pushed beyond ±20 except B&W desaturation', () => {
+    for (const preset of PRESETS) {
+      for (const [key, value] of Object.entries(preset.values)) {
+        if (key === 'saturation' && value === -100) continue // B&W is total by definition
+        if (key === 'vibrance' && value === -100) continue
+        expect(Math.abs(value as number)).toBeLessThanOrEqual(20)
+      }
+    }
+  })
+
+  it('offers the filmic looks', () => {
+    const ids = PRESETS.map((p) => p.id)
+    expect(ids).toContain('film')
+    expect(ids).toContain('moody')
+  })
+})

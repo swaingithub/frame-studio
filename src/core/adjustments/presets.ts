@@ -18,49 +18,61 @@ export const PRESETS: readonly AdjustPreset[] = [
     id: 'natural',
     label: 'Natural',
     description: 'Gentle pop and lift — good default',
-    values: { contrast: 8, clarity: 5, vibrance: 8, shadows: 6 },
+    values: { contrast: 6, clarity: 4, vibrance: 6, shadows: 5 },
   },
   {
     id: 'vivid',
     label: 'Vivid',
     description: 'Punchy colors and strong contrast',
-    values: { contrast: 25, saturation: 12, vibrance: 28, clarity: 14, shadows: -8, blacks: -6 },
+    values: { contrast: 15, saturation: 7, vibrance: 16, clarity: 8, shadows: -4, blacks: -3 },
   },
   {
     id: 'mono',
     label: 'B&W',
     description: 'Classic black-and-white with texture',
-    values: { saturation: -100, vibrance: -100, contrast: 18, clarity: 12, grain: 15, vignette: 16 },
+    values: { saturation: -100, vibrance: -100, contrast: 14, clarity: 9, grain: 9, vignette: 9 },
   },
   {
     id: 'warm',
     label: 'Warm',
     description: 'Golden-hour glow',
-    values: { temperature: 20, exposure: 5, vibrance: 10, highlights: -6, vignette: 8 },
+    values: { temperature: 11, exposure: 3, vibrance: 6, highlights: -4, vignette: 4 },
   },
   {
     id: 'cinematic',
     label: 'Cinematic',
     description: 'Cool teal grade with crushed blacks',
-    values: { temperature: -16, contrast: 12, shadows: 14, highlights: -12, saturation: -6, vignette: 14 },
+    values: { temperature: -12, contrast: 9, shadows: 10, highlights: -9, saturation: -4, vignette: 8 },
+  },
+  {
+    id: 'film',
+    label: 'Film',
+    description: 'Soft filmic curve, gentle highlight roll-off',
+    values: { contrast: 5, blacks: 5, highlights: -5, saturation: -4, grain: 5, temperature: 2 },
+  },
+  {
+    id: 'moody',
+    label: 'Moody',
+    description: 'Desaturated shadows, restrained contrast',
+    values: { contrast: 8, shadows: 8, highlights: -9, saturation: -12, temperature: -5, vignette: 9 },
   },
   {
     id: 'fade',
     label: 'Fade',
     description: 'Matte film look with lifted blacks',
-    values: { contrast: -16, blacks: 22, whites: -12, saturation: -10, grain: 8 },
+    values: { contrast: -10, blacks: 13, whites: -8, saturation: -6, grain: 5 },
   },
   {
     id: 'crisp',
     label: 'Crisp',
     description: 'Sharp and clean for details and text',
-    values: { clarity: 16, sharpness: 22, contrast: 10, noiseReduction: 12 },
+    values: { clarity: 10, sharpness: 13, contrast: 7, noiseReduction: 10 },
   },
   {
     id: 'dream',
     label: 'Dream',
     description: 'Soft, hazy, low-contrast glow',
-    values: { exposure: 6, contrast: -12, blacks: 10, highlights: 12, saturation: 5, grain: 10 },
+    values: { exposure: 4, contrast: -8, blacks: 7, highlights: 9, saturation: 4, grain: 7 },
   },
 ]
 
@@ -170,7 +182,7 @@ export function autoValues(stats: HistogramStats): Partial<AdjustValues> {
   const shadows = clamp((0.38 - stats.median) * 40)
   if (Math.abs(shadows) > 4) values.shadows = shadows
 
-  values.vibrance = 12 // gentle, near-free win on real footage
+  values.vibrance = 8 // gentle, near-free win on real footage — restrained
   return values
 }
 
