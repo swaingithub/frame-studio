@@ -7,6 +7,8 @@ import { VideoStage } from '../../video/components/VideoStage'
 import { useVideoEditor, layoutOf } from '../../video/store'
 import { TRANSITION_LABELS, type VideoTransition } from '../../video/sequenceModel'
 import { STICKER_CATEGORIES } from '../../video/stickers'
+import { MobileVideoBar } from './MobileVideoBar'
+import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
 import { cn } from '../../../lib/cn'
 import type { MediaAsset } from '../../../core/db/schema'
 
@@ -23,6 +25,7 @@ export function VideoWorkspace(): ReactNode {
   const durations = useVideoEditor((s) => s.durations)
   const revision = useVideoEditor((s) => s.revision)
   void revision
+  const phone = useMediaQuery(PHONE_QUERY)
 
   // Adopt/repair the persisted sequence once the project is known.
   useEffect(() => {
@@ -135,6 +138,9 @@ export function VideoWorkspace(): ReactNode {
           <SelectClipHint hasAssets={(project.videoAssets?.length ?? 0) > 0} />
         )}
       </div>
+
+      {/* CapCut-style thumb bar (phones only) */}
+      {phone ? <MobileVideoBar /> : null}
     </div>
   )
 }
