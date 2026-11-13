@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react'
 import { Crop, FlipHorizontal, FlipVertical, RotateCcw, RotateCw, Undo2, Redo2, ChevronsDownUp, ChevronsUpDown, Users, Trash2 } from 'lucide-react'
 import { ADJUSTMENTS, ADJUSTMENT_SECTIONS } from '../../../core/adjustments/registry'
 import type { EditDoc } from '../../../core/adjustments/edits'
+import { usePreviewSource } from './EditorCanvas'
 import { HistogramView } from './HistogramView'
 import { AdjustSlider } from './AdjustSlider'
 import { PresetBar } from './PresetBar'
@@ -37,6 +38,9 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
   const editor = usePhotoEditor()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const stats = histogram ? statsFromHistogram(histogram.l, histogram.samples) : null
+  // Live thumbnail source for the Looks gallery — re-derives per photo switch.
+  const photoId = useProjectsStore((s) => s.projects.find((p) => p.id === s.currentId)?.activePhotoId ?? null)
+  const source = usePreviewSource(photoId)
 
   if (!doc) {
     return (
@@ -53,6 +57,8 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
       <PresetBar
         stats={stats}
         onApply={(values, label) => editor.applyAdjustments(values, label)}
+        source={source}
+        sourceKey={photoId ?? undefined}
       />
 
       {ADJUSTMENT_SECTIONS.map((section) => {

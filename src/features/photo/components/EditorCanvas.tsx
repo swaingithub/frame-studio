@@ -74,6 +74,7 @@ export async function loadSource(assetId: string, blob: Blob): Promise<SourceEnt
   const preview = await makePreview(blob, full)
   const entry: SourceEntry = { full, preview }
   sourceCache.set(assetId, entry)
+  notifySourceChanged()
   while (sourceCache.size > sourceCacheCap()) {
     const oldest = sourceCache.keys().next().value
     if (oldest === undefined) break
@@ -89,6 +90,38 @@ export async function loadSource(assetId: string, blob: Blob): Promise<SourceEnt
 /** Access for export: the full-res bitmap for an asset, or null. */
 export function getFullSource(assetId: string): ImageBitmap | null {
   return sourceCache.get(assetId)?.full ?? null
+}
+
+/** Small preview bitmap for an asset (thumbnails, preset looks), or null. */
+export function getPreviewSource(assetId: string): ImageBitmap | null {
+  return sourceCache.get(assetId)?.preview ?? null
+}
+
+/** Bumped whenever the source cache changes, so subscribers can re-check. */
+const sourceListeners = new Set<() => void>()
+let sourceVersion = 0
+function notifySourceChanged(): void {
+  sourceVersion++
+  for (const listener of sourceListeners) listener()
+}
+
+/** Reactively returns the cached preview bitmap for an asset (or null). */
+export function usePreviewSource(assetId: string | null): ImageBitmap | null {
+  const [, force] = useState(0)
+  useEffect(() => {
+    let last = sourceVersion
+    const listener = (): void => {
+      if (sourceVersion !== last) {
+        last = sourceVersion
+        force((n) => n + 1)
+      }
+    }
+    sourceListeners.add(listener)
+    return () => {
+      sourceListeners.delete(listener)
+    }
+  }, [])
+  return assetId ? getPreviewSource(assetId) : null
 }
 
 interface EditorCanvasProps {
