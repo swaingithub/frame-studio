@@ -169,7 +169,22 @@ export function Shell(): ReactNode {
               : 'bottom-0 right-0 top-[calc(2.75rem+env(safe-area-inset-top))] w-[min(86vw,380px)] border-l',
           )}
         >
-          {phone ? <div className="mx-auto mt-1.5 h-1 w-10 shrink-0 rounded-full bg-line" aria-hidden /> : null}
+          {phone ? (
+            <div
+              className="mx-auto mt-1.5 h-1 w-10 shrink-0 cursor-grab touch-none rounded-full bg-line"
+              aria-hidden
+              onPointerDown={(e) => {
+                const startY = e.clientY
+                const el = e.currentTarget
+                el.setPointerCapture(e.pointerId)
+                const onUp = (ev: PointerEvent): void => {
+                  if (ev.clientY - startY > 48) setOverlayPanel(null)
+                  el.releasePointerCapture(e.pointerId)
+                }
+                el.addEventListener('pointerup', onUp, { once: true })
+              }}
+            />
+          ) : null}
           <PanelCloseButton onClose={() => setOverlayPanel(null)} />
           <div className="min-h-0 flex-1">
             <InspectorPanel />

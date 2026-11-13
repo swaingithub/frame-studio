@@ -8,6 +8,7 @@ import { AdjustPanel } from '../../photo/components/AdjustPanel'
 import { usePhotoEditor } from '../../photo/store'
 import { VideoInspectorBody } from '../../video/components/VideoInspector'
 import { useVideoEditor } from '../../video/store'
+import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
 import type { Histogram } from '../../../core/render/histogram'
 import type { ReactNode } from 'react'
 
@@ -85,7 +86,22 @@ function useVideoEditorHistogram(): Histogram | null {
 function AssetInspectorCard({ assetId }: { assetId: string }): ReactNode {
   const asset = useAssets()?.find((a) => a.id === assetId) ?? null
   const thumb = useThumbnail(asset)
+  const phone = useMediaQuery(PHONE_QUERY)
   if (!asset) return null
+  // Phones: the live stage is directly behind the sheet — don't duplicate a
+  // big preview here; one compact line keeps the editing tools above the fold.
+  if (phone) {
+    return (
+      <div className="rounded-lg border border-line bg-elevated px-3 py-2">
+        <p className="truncate text-xs font-medium text-hi">{asset.name}</p>
+        <p className="mt-0.5 text-[10px] text-lo">
+          {asset.kind === 'video' ? `Video${asset.duration !== null ? ` · ${formatDuration(asset.duration)}` : ''}` : 'Image'}
+          {asset.width && asset.height ? ` · ${asset.width}×${asset.height}` : ''}
+          {` · ${formatBytes(asset.size)}`}
+        </p>
+      </div>
+    )
+  }
   return (
     <div className="rounded-lg border border-line bg-elevated p-3">
       <div className="mb-2 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md border border-line bg-[var(--c-stage)]">
