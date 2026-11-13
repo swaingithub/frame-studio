@@ -39,6 +39,25 @@ const speedMarks: { v: number; label: string }[] = [
 ]
 
 /** Basic ↔ Pro switch: Pro exposes keyframes, speed ramps and camera tools. */
+/** Strength dial for the active look on the selected clip. */
+function VideoLookStrength(): ReactNode {
+  const look = useVideoEditor((s) => s.doc?.look ?? null)
+  const editor = useVideoEditor()
+  if (!look) return null
+  return (
+    <AdjustSlider
+      param={{ label: 'Look strength', min: 0, max: 1, def: 1, step: 0.01 }}
+      value={look.strength}
+      onLive={(v) => editor.setLookStrength(v)}
+      onCommit={() => editor.commit('Look strength')}
+      onReset={() => {
+        editor.setLookStrength(1)
+        editor.commit('Look strength')
+      }}
+    />
+  )
+}
+
 function ModeToggle(): ReactNode {
   const proMode = useVideoEditor((s) => s.proMode)
   const setProMode = useVideoEditor((s) => s.setProMode)
@@ -128,6 +147,8 @@ export function VideoInspectorBody({ histogram }: { histogram: Histogram | null 
       <HistogramView histogram={histogram} />
 
       <PresetBar stats={stats} onApply={applyAdjustments} />
+
+      <VideoLookStrength />
 
       <SpeedControls doc={doc} />
 

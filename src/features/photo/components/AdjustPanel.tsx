@@ -159,9 +159,13 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
           param={{ label: 'Straighten', min: -45, max: 45, def: 0 }}
           value={doc.geometry.straighten}
           onLive={(v) => editor.setStraightenLive(v)}
-          onCommit={() => editor.commit('Straighten')}
+          onCommit={() => {
+            editor.setStraightenActive(false)
+            editor.commit('Straighten')
+          }}
           onReset={() => {
             editor.setStraightenLive(0)
+            editor.setStraightenActive(false)
             editor.commit('Straighten')
           }}
           disabled={editor.crop !== null}

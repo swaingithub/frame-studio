@@ -39,6 +39,7 @@ import {
 } from './sequenceModel'
 import { layoutSequence } from './sequenceModel'
 import { syncCutsToBeats } from './sequenceModel'
+import { PRESETS, mixValues } from '../../core/adjustments/presets'
 import { animAt, ANIM_DEFAULTS, type AnimBase, type Keyframe, type KeyframeSet, type SpeedCurve } from './sequenceAnim'
 import { STICKER_DEFAULT_SCALE } from './stickers'
 import { CAPTION_BASE, type CaptionSegment } from './captions'
@@ -103,7 +104,9 @@ interface VideoState {
   setAssetDuration: (assetId: string, duration: number) => void
 
   setAdjustment: (key: keyof VideoEditDoc['adjustments'], value: number) => void
-  applyAdjustments: (values: Partial<VideoEditDoc['adjustments']>, label: string) => void
+  applyAdjustments: (values: Partial<VideoEditDoc['adjustments']>, label: string, lookId?: string) => void
+  /** Dials the active look's strength (0..1). */
+  setLookStrength: (strength: number) => void
   /** Live chroma key change (single history entry via the following commit). */
   setChromaKey: (patch: Partial<ChromaKey>) => void
   /** Live shape-mask change (single history entry via the following commit). */
@@ -402,7 +405,8 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       const base = get().pendingBefore ?? get().doc
       if (!base || !get().activeClipId) return
       if (!get().pendingBefore) set({ pendingBefore: get().doc })
-      writeDoc(withVideoAdjustment(base, key, value))
+      // Manual tweaks detach the active one-click look.
+      writeDoc({ ...withVideoAdjustment(base, key, value), look: null })
     },
 
     setChromaKey: (patch) => {
@@ -434,15 +438,30 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       set({ revision: get().revision + 1 })
     },
 
-    applyAdjustments: (values, label) => {
+    applyAdjustments: (values, label, lookId) => {
       const doc = get().doc
       if (!doc || !get().activeClipId) return
       const before = snap()
-      const next = withVideoAdjustments(doc, values)
+      const next = { ...withVideoAdjustments(doc, values), look: lookId ? { id: lookId, strength: 1 } : null }
       const afterClips = get().sequence.map((c) => (c.id === get().activeClipId ? { ...c, edit: next } : c))
       recordHistory(label, before, snap({ clips: afterClips }))
       writeDoc(next)
       set({ revision: get().revision + 1 })
+    },
+
+    /** Dials the active look's strength; recomputes adjustments from the preset. */
+    setLookStrength: (strength) => {
+      const doc = get().doc
+      if (!doc || !doc.look || !get().activeClipId) return
+      const preset = PRESETS.find((p) => p.id === doc.look?.id)
+      if (!preset) return
+      const clamped = Math.min(1, Math.max(0, strength))
+      const current = get().pendingBefore ?? doc
+      if (!get().pendingBefore) set({ pendingBefore: doc })
+      const next = { ...withVideoAdjustments(current, mixValues(preset, clamped)), look: { id: doc.look.id, strength: clamped } }
+      const afterClips = get().sequence.map((c) => (c.id === get().activeClipId ? { ...c, edit: next } : c))
+      writeDoc(next)
+      set({ sequence: afterClips, doc: next, revision: get().revision + 1 })
     },
 
     commit: (label) => {

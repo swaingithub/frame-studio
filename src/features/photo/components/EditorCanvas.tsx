@@ -275,6 +275,7 @@ export function EditorCanvas({ asset, onHistogram, onExport }: EditorCanvasProps
 
   const showFallbackNote = fallback === true
   const overlays = effectiveDoc.textOverlays ?? []
+  const straightenActive = usePhotoEditor((s) => s.straightenActive)
 
   return (
     <div ref={containerRef} className="relative flex h-full min-h-0 w-full items-center justify-center p-2 sm:p-4">
@@ -297,6 +298,18 @@ export function EditorCanvas({ asset, onHistogram, onExport }: EditorCanvasProps
           interactive={overlays.length > 0 && !geometryOnly && !bypass}
         />
         <canvas ref={histRef} width={160} height={120} className="hidden" aria-hidden />
+        {/* Straightening guides: horizon line + thirds, visible only during
+            the straighten drag so the user can align a level line. */}
+        {straightenActive && !geometryOnly ? (
+          <div className="pointer-events-none absolute inset-0 z-10" aria-hidden>
+            <div className="absolute inset-x-0 top-1/2 h-px bg-cyan-300/80 shadow-[0_0_4px_rgba(0,0,0,0.7)]" />
+            <div className="absolute inset-y-0 left-1/2 w-px bg-cyan-300/60 shadow-[0_0_4px_rgba(0,0,0,0.7)]" />
+            <div className="absolute inset-x-0 top-1/3 h-px bg-white/20" />
+            <div className="absolute inset-x-0 top-2/3 h-px bg-white/20" />
+            <div className="absolute inset-y-0 left-1/3 w-px bg-white/20" />
+            <div className="absolute inset-y-0 left-2/3 w-px bg-white/20" />
+          </div>
+        ) : null}
         {frameAspect > 0 && geometryOnly ? <CropOverlay frameAspect={frameAspect} /> : null}
       </div>
 

@@ -41,6 +41,8 @@ interface PhotoEditorState {
   /** Mirrors the active photo's doc for renderers. */
   doc: EditDoc | null
   bypass: boolean
+  /** True while the straighten slider is being dragged (shows horizon guides). */
+  straightenActive: boolean
   crop: CropSession | null
   history: EditHistory
   /** Gesture capture: doc before the in-flight change (no history spam). */
@@ -64,6 +66,8 @@ interface PhotoEditorState {
   redo: () => void
   jumpTo: (entryId: string) => void
   setBypass: (v: boolean) => void
+  /** Horizon-guide visibility while straightening (ended by commit). */
+  setStraightenActive: (active: boolean) => void
   startCrop: (aspect?: number | null) => void
   cancelCrop: () => void
   setCropDraft: (rect: CropRect) => void
@@ -116,6 +120,7 @@ function writeDocToProject(photoId: string, doc: EditDoc): void {
 export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
   doc: null,
   bypass: false,
+  straightenActive: false,
   crop: null,
   history: new EditHistory(),
   pendingBefore: null,
@@ -187,10 +192,13 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     const current = get().pendingBefore ?? doc
     if (!get().pendingBefore) set({ pendingBefore: doc })
     const next = withGeometry(current, { straighten: clampStraighten(Math.round(value)) })
-    set({ doc: next })
+    set({ doc: next, straightenActive: true })
     const photoId = currentPhotoId()
     if (photoId) writeDocToProject(photoId, next)
   },
+
+  /** Horizon-guide visibility while straightening (ended by commit). */
+  setStraightenActive: (active) => set({ straightenActive: active }),
 
   resetEdits: () => {
     const doc = get().doc
@@ -341,7 +349,7 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     if (!entry) return
     writeDocToProject(entry.photoId, entry.before)
     if (entry.photoId === currentPhotoId()) {
-      set({ doc: entry.before, crop: null, bypass: false, revision: get().revision + 1 })
+      set({ doc: entry.before, crop: null, bypass: false, straightenActive: false, revision: get().revision + 1 })
     } else {
       set({ revision: get().revision + 1 })
     }
@@ -352,7 +360,7 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     if (!entry) return
     writeDocToProject(entry.photoId, entry.after)
     if (entry.photoId === currentPhotoId()) {
-      set({ doc: entry.after, crop: null, bypass: false, revision: get().revision + 1 })
+      set({ doc: entry.after, crop: null, bypass: false, straightenActive: false, revision: get().revision + 1 })
     } else {
       set({ revision: get().revision + 1 })
     }

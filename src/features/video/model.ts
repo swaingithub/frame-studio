@@ -1,5 +1,5 @@
 import { ADJUSTMENTS_BY_KEY, defaultAdjustments, type AdjustValues } from '../../core/adjustments/registry'
-import { defaultChromaKey, defaultGeometry, defaultMask, sanitizeChromaKey, sanitizeMask, type ChromaKey, type EditDoc, type Mask } from '../../core/adjustments/edits'
+import { defaultChromaKey, defaultGeometry, defaultMask, sanitizeChromaKey, sanitizeLook, sanitizeMask, type ChromaKey, type EditDoc, type LookRef, type Mask } from '../../core/adjustments/edits'
 import type { SpeedCurve } from './sequenceAnim'
 
 /**
@@ -37,6 +37,8 @@ export interface VideoEditDoc {
   mask?: Mask | null
   /** AI background removal (people only, per clip). Default false. */
   bgRemove?: boolean
+  /** Which one-click look is active and its dialled strength. */
+  look?: LookRef | null
 }
 
 export function defaultVideoEdit(): VideoEditDoc {
@@ -134,6 +136,7 @@ export function sanitizeVideoEdit(raw: unknown, duration = 0): VideoEditDoc {
     speedCurve: clampCurve(raw.speedCurve),
     chromaKey: raw.chromaKey === undefined || raw.chromaKey === null ? null : sanitizeChromaKey(raw.chromaKey),
     mask: raw.mask === undefined || raw.mask === null ? null : sanitizeMask(raw.mask),
+    look: raw.look === undefined || raw.look === null ? null : sanitizeLook(raw.look),
     bgRemove: raw.bgRemove === true,
   }
 }
