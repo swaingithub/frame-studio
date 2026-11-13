@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ADJUSTMENTS_BY_KEY, defaultAdjustments } from './registry'
-import { PRESETS, autoValues, mixValues, presetValues, statsFromHistogram } from './presets'
+import { PRESETS, autoValues, filmicCurve, mixValues, presetValues, statsFromHistogram } from './presets'
 
 describe('presets', () => {
   it('produces valid full adjustment sets within param ranges', () => {
@@ -137,5 +137,26 @@ describe('premium restraint (look library)', () => {
     const ids = PRESETS.map((p) => p.id)
     expect(ids).toContain('film')
     expect(ids).toContain('moody')
+  })
+})
+
+describe('filmicCurve', () => {
+  it('strength 0 is identity', () => {
+    const curve = filmicCurve(0)
+    expect(curve.master).toEqual([0, 0.25, 0.5, 0.75, 1])
+  })
+
+  it('strength 1 rolls off highlights and lifts the toe', () => {
+    const curve = filmicCurve(1)
+    expect(curve.master[4]).toBeLessThan(1) // highlight shoulder
+    expect(curve.master[0]).toBeGreaterThan(0) // lifted black
+    expect(curve.master.every((v) => v >= 0 && v <= 1)).toBe(true)
+  })
+
+  it('interpolates monotonically at mid strength', () => {
+    const curve = filmicCurve(0.5)
+    for (let i = 1; i < curve.master.length; i++) {
+      expect(curve.master[i]).toBeGreaterThanOrEqual(curve.master[i - 1])
+    }
   })
 })

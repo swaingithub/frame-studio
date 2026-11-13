@@ -1,5 +1,6 @@
 import { ADJUSTMENTS_BY_KEY, defaultAdjustments, type AdjustValues } from '../../core/adjustments/registry'
 import { defaultChromaKey, defaultGeometry, defaultMask, sanitizeChromaKey, sanitizeLook, sanitizeMask, type ChromaKey, type EditDoc, type LookRef, type Mask } from '../../core/adjustments/edits'
+import { sanitizeToneCurve, type ToneCurve } from '../../core/adjustments/color'
 import type { SpeedCurve } from './sequenceAnim'
 
 /**
@@ -39,6 +40,8 @@ export interface VideoEditDoc {
   bgRemove?: boolean
   /** Which one-click look is active and its dialled strength. */
   look?: LookRef | null
+  /** Look-owned filmic tone curve (null/absent = identity). */
+  curves?: ToneCurve | null
 }
 
 export function defaultVideoEdit(): VideoEditDoc {
@@ -137,6 +140,7 @@ export function sanitizeVideoEdit(raw: unknown, duration = 0): VideoEditDoc {
     chromaKey: raw.chromaKey === undefined || raw.chromaKey === null ? null : sanitizeChromaKey(raw.chromaKey),
     mask: raw.mask === undefined || raw.mask === null ? null : sanitizeMask(raw.mask),
     look: raw.look === undefined || raw.look === null ? null : sanitizeLook(raw.look),
+    curves: raw.curves === undefined || raw.curves === null ? null : sanitizeToneCurve(raw.curves),
     bgRemove: raw.bgRemove === true,
   }
 }
@@ -218,5 +222,6 @@ export function videoDocToEditDoc(doc: VideoEditDoc, geometry: EditDoc['geometry
     geometry,
     chromaKey: doc.chromaKey ?? null,
     mask: doc.mask ?? null,
+    curves: doc.curves ?? undefined,
   }
 }

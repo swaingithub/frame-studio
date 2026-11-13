@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { useProjectsStore } from '../projects/store'
-import { PRESETS, mixValues } from '../../core/adjustments/presets'
+import { PRESETS, mixValues, filmicCurve } from '../../core/adjustments/presets'
 import {
   createDefaultEditDoc,
   sanitizeEditDoc,
@@ -142,9 +142,11 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     const current = get().pendingBefore ?? doc
     if (!get().pendingBefore) set({ pendingBefore: doc })
     const next = withAdjustment(current, key, clamped)
-    set({ doc: { ...next, look: null } })
+    // Manual tweaks detach the look and its filmic curve (if the look set it).
+    const detached = { ...next, look: null, ...(doc.look ? { curves: defaultToneCurve() } : {}) }
+    set({ doc: detached })
     const photoId = currentPhotoId()
-    if (photoId) writeDocToProject(photoId, { ...next, look: null })
+    if (photoId) writeDocToProject(photoId, detached)
   },
 
   commit: (label) => {
@@ -319,7 +321,13 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     const doc = get().doc
     const photoId = currentPhotoId()
     if (!doc || !photoId) return
-    const next = { ...withAdjustments(doc, values), look: lookId ? { id: lookId, strength: 1 } : null }
+    const next = {
+      ...withAdjustments(doc, values),
+      look: lookId ? { id: lookId, strength: 1 } : null,
+      // Looks own the tone curve: the shared filmic shape is what gives the
+      // premium highlight roll-off. Auto (no lookId) resets to identity.
+      curves: lookId ? filmicCurve(1) : defaultToneCurve(),
+    }
     get().history.record(photoId, label, doc, next)
     writeDocToProject(photoId, next)
     set({ doc: next, revision: get().revision + 1 })
@@ -339,6 +347,7 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     const next = {
       ...withAdjustments(current, mixValues(preset, clamped)),
       look: { id: doc.look.id, strength: clamped },
+      curves: filmicCurve(clamped),
     }
     set({ doc: next })
     writeDocToProject(photoId, next)

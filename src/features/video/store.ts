@@ -39,7 +39,7 @@ import {
 } from './sequenceModel'
 import { layoutSequence } from './sequenceModel'
 import { syncCutsToBeats } from './sequenceModel'
-import { PRESETS, mixValues } from '../../core/adjustments/presets'
+import { PRESETS, mixValues, filmicCurve } from '../../core/adjustments/presets'
 import { animAt, ANIM_DEFAULTS, type AnimBase, type Keyframe, type KeyframeSet, type SpeedCurve } from './sequenceAnim'
 import { STICKER_DEFAULT_SCALE } from './stickers'
 import { CAPTION_BASE, type CaptionSegment } from './captions'
@@ -405,8 +405,8 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       const base = get().pendingBefore ?? get().doc
       if (!base || !get().activeClipId) return
       if (!get().pendingBefore) set({ pendingBefore: get().doc })
-      // Manual tweaks detach the active one-click look.
-      writeDoc({ ...withVideoAdjustment(base, key, value), look: null })
+      // Manual tweaks detach the active one-click look (and its curve).
+      writeDoc({ ...withVideoAdjustment(base, key, value), look: null, ...(base.look ? { curves: null } : {}) })
     },
 
     setChromaKey: (patch) => {
@@ -442,7 +442,11 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       const doc = get().doc
       if (!doc || !get().activeClipId) return
       const before = snap()
-      const next = { ...withVideoAdjustments(doc, values), look: lookId ? { id: lookId, strength: 1 } : null }
+      const next = {
+        ...withVideoAdjustments(doc, values),
+        look: lookId ? { id: lookId, strength: 1 } : null,
+        curves: lookId ? filmicCurve(1) : null,
+      }
       const afterClips = get().sequence.map((c) => (c.id === get().activeClipId ? { ...c, edit: next } : c))
       recordHistory(label, before, snap({ clips: afterClips }))
       writeDoc(next)
@@ -458,7 +462,11 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       const clamped = Math.min(1, Math.max(0, strength))
       const current = get().pendingBefore ?? doc
       if (!get().pendingBefore) set({ pendingBefore: doc })
-      const next = { ...withVideoAdjustments(current, mixValues(preset, clamped)), look: { id: doc.look.id, strength: clamped } }
+      const next = {
+        ...withVideoAdjustments(current, mixValues(preset, clamped)),
+        look: { id: doc.look.id, strength: clamped },
+        curves: filmicCurve(clamped),
+      }
       const afterClips = get().sequence.map((c) => (c.id === get().activeClipId ? { ...c, edit: next } : c))
       writeDoc(next)
       set({ sequence: afterClips, doc: next, revision: get().revision + 1 })

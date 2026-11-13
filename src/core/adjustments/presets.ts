@@ -1,4 +1,5 @@
 import { ADJUSTMENTS, ADJUSTMENTS_BY_KEY, defaultAdjustments, type AdjustValues } from './registry'
+import { defaultToneCurve, identityKnots, type CurveKnots, type ToneCurve } from './color'
 
 /**
  * One-click looks shared by the photo and video editors, plus the Auto
@@ -188,3 +189,19 @@ export function autoValues(stats: HistogramStats): Partial<AdjustValues> {
 
 /** All registered adjustment keys, for tests/UI to validate coverage. */
 export const ADJUSTMENT_KEYS = ADJUSTMENTS.map((p) => p.key)
+
+/**
+ * The shared filmic tone curve every look rides on: barely-lifted black,
+ * a gentle mid-tone S, and a highlight shoulder that keeps near-white
+ * detail instead of clipping. `strength` 0 = identity, 1 = full filmic.
+ * This is what makes the looks read "premium" rather than "fancy" — the
+ * slider adjustments alone can't roll off highlights.
+ */
+export function filmicCurve(strength: number): ToneCurve {
+  const id = identityKnots()
+  const target: CurveKnots = [0.012, 0.235, 0.512, 0.772, 0.988]
+  const t = Math.min(1, Math.max(0, strength))
+  const curve = defaultToneCurve()
+  curve.master = target.map((y, i) => id[i] + (y - id[i]) * t) as CurveKnots
+  return curve
+}
