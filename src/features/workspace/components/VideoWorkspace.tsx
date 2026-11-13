@@ -58,8 +58,8 @@ export function VideoWorkspace(): ReactNode {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {/* Sequence strip */}
-      <div className="flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-b border-line bg-panel px-3">
+      {/* Sequence strip (at the bottom on phones, right above the thumb bar) */}
+      <div className={cn('flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-b border-line bg-panel px-3', phone && 'order-3 border-b-0 border-t')}>
         {sequence.length === 0 ? <EmptySequence addable={addable} /> : null}
         {layout.entries.map((entry, index) => (
           <StripClip
@@ -97,7 +97,7 @@ export function VideoWorkspace(): ReactNode {
 
       {/* Overlay chips: add text / media layers above the base track */}
       {sequence.length > 0 ? (
-        <div className="flex h-9 shrink-0 items-center gap-1.5 overflow-x-auto border-b border-line bg-panel px-3" role="group" aria-label="Add overlay layers">
+        <div className={cn('flex h-9 shrink-0 items-center gap-1.5 overflow-x-auto border-b border-line bg-panel px-3', phone && 'order-2')} role="group" aria-label="Add overlay layers">
           <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-lo" aria-hidden>
             <TypeIcon size={11} />
             Overlays
@@ -131,7 +131,7 @@ export function VideoWorkspace(): ReactNode {
       ) : null}
 
       {/* Stage */}
-      <div className="flex min-h-0 flex-1 flex-col bg-stage">
+      <div className={cn('flex min-h-0 flex-1 flex-col bg-stage', phone && 'order-1')}>
         {sequence.length > 0 ? (
           <VideoStage />
         ) : (
@@ -140,7 +140,11 @@ export function VideoWorkspace(): ReactNode {
       </div>
 
       {/* CapCut-style thumb bar (phones only) */}
-      {phone ? <MobileVideoBar /> : null}
+      {phone ? (
+        <div className="order-4">
+          <MobileVideoBar />
+        </div>
+      ) : null}
     </div>
   )
 }

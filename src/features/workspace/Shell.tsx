@@ -163,7 +163,7 @@ export function Shell(): ReactNode {
           aria-modal="true"
           aria-label="Inspector"
           className={cn(
-            'fixed z-50 flex flex-col border-line bg-panel shadow-2xl',
+            'fs-anim-sheet-in fixed z-50 flex flex-col border-line bg-panel shadow-2xl',
             phone
               ? 'inset-x-0 bottom-0 h-[72dvh] rounded-t-2xl border-t'
               : 'bottom-0 right-0 top-[calc(2.75rem+env(safe-area-inset-top))] w-[min(86vw,380px)] border-l',

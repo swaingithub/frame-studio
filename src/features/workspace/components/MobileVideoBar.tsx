@@ -116,7 +116,7 @@ function ToolSheet({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-2xl"
+        className="fs-anim-sheet-in fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-2xl border-t border-line bg-panel shadow-2xl"
         style={{ height: '86dvh' }}
       >
         <div
