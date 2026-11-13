@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "license": "CC0-1.0",
+  "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+  "attribution": "Frame Studio Originals \u2014 original synthesis, dedicated to the public domain.",
+  "tracks": [
+    {
+      "id": "night-drive",
+      "title": "Night Drive",
+      "artist": "Frame Studio Originals",
+      "file": "night-drive.m4a",
+      "duration": 45.71,
+      "bpm": 84,
+      "mood": [
+        "Chill",
+        "Lo-fi"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "sunrise",
+      "title": "Sunrise",
+      "artist": "Frame Studio Originals",
+      "file": "sunrise.m4a",
+      "duration": 38.4,
+      "bpm": 100,
+      "mood": [
+        "Upbeat",
+        "Uplifting"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "deep-focus",
+      "title": "Deep Focus",
+      "artist": "Frame Studio Originals",
+      "file": "deep-focus.m4a",
+      "duration": 32.0,
+      "bpm": 60,
+      "mood": [
+        "Ambient",
+        "Calm"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "action-cuts",
+      "title": "Action Cuts",
+      "artist": "Frame Studio Originals",
+      "file": "action-cuts.m4a",
+      "duration": 30.0,
+      "bpm": 128,
+      "mood": [
+        "Cinematic",
+        "Tense"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "soft-keys",
+      "title": "Soft Keys",
+      "artist": "Frame Studio Originals",
+      "file": "soft-keys.m4a",
+      "duration": 26.67,
+      "bpm": 72,
+      "mood": [
+        "Gentle",
+        "Piano"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "street-pulse",
+      "title": "Street Pulse",
+      "artist": "Frame Studio Originals",
+      "file": "street-pulse.m4a",
+      "duration": 43.64,
+      "bpm": 88,
+      "mood": [
+        "Hip-hop",
+        "Boom-bap"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "bright-horizon",
+      "title": "Bright Horizon",
+      "artist": "Frame Studio Originals",
+      "file": "bright-horizon.m4a",
+      "duration": 34.91,
+      "bpm": 110,
+      "mood": [
+        "Corporate",
+        "Inspiring"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "hollow-hall",
+      "title": "Hollow Hall",
+      "artist": "Frame Studio Originals",
+      "file": "hollow-hall.m4a",
+      "duration": 38.4,
+      "bpm": 50,
+      "mood": [
+        "Horror",
+        "Suspense"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    },
+    {
+      "id": "neon-arcade",
+      "title": "Neon Arcade",
+      "artist": "Frame Studio Originals",
+      "file": "neon-arcade.m4a",
+      "duration": 32.54,
+      "bpm": 118,
+      "mood": [
+        "Retro",
+        "Synthwave"
+      ],
+      "license": "CC0-1.0",
+      "source": "Original synthesis"
+    }
+  ]
+}

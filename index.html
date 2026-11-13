@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0c0d10" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#eff1f3" media="(prefers-color-scheme: light)" />
+    <meta
+      name="description"
+      content="Frame Studio — a local-first, privacy-first photo & video editor. Everything runs in your browser; nothing is ever uploaded."
+    />
+    <meta name="color-scheme" content="dark light" />
+    <!--
+      CSP: everything is served same-origin; the ONLY cross-origin fetches are
+      the user-opt-in AI model downloads (MediaPipe WASM from jsDelivr,
+      Whisper models from Hugging Face — never automatic, never silent).
+      'unsafe-inline' covers Vite's injected dev scripts and the app's inline
+      styles; 'wasm-unsafe-eval' is required by ONNX Runtime / MediaPipe WASM.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; worker-src 'self' blob:; connect-src 'self' blob: data: https://cdn.jsdelivr.net https://*.huggingface.co; img-src 'self' data: blob:; media-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <title>Frame Studio</title>
+    <style>
+      /* Pre-hydration paint so the shell never flashes white */
+      html,
+      body {
+        margin: 0;
+        background: #0c0d10;
+        color: #e9ecef;
+      }
+      html.light {
+        background: #eff1f3;
+        color: #17191c;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

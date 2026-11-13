@@ -1,0 +1,20 @@
+Frame Studio Originals — bundled music library
+==============================================
+
+All tracks in this folder were synthesized from scratch for Frame Studio by
+the project's own `scripts/generate-music.py` generator. They contain no
+samples, no third-party recordings, and no downloaded material.
+
+License: CC0 1.0 Universal (public domain dedication)
+https://creativecommons.org/publicdomain/zero/1.0/
+
+You may copy, modify, distribute and use these tracks for any purpose,
+including commercial projects, without attribution. Attribution is
+appreciated but not required:
+
+    "Night Drive", "Sunrise", "Deep Focus", "Action Cuts", "Soft Keys",
+    "Street Pulse", "Bright Horizon", "Hollow Hall", "Neon Arcade"
+    — Frame Studio Originals (CC0 1.0)
+
+The app never streams these files from the internet. They are bundled with
+the build and copied into the user's local project only when chosen.

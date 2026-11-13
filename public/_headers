@@ -1,0 +1,8 @@
+# Static-hosting security headers (Netlify / Cloudflare Pages format).
+# The CSP is also mirrored as a <meta> tag in index.html for hosts that
+# can't set headers; the header version (this file) wins when supported.
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()

@@ -1,0 +1,211 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Theme tokens. Semantic vars live in :root / .dark; @theme inline maps them
+   to Tailwind utilities (bg-app, bg-panel, text-hi, border-line, bg-accent…)
+   so a single .dark class swaps the entire theme.
+--------------------------------------------------------------------------- */
+:root {
+  --c-app: #eff1f3;
+  --c-panel: #ffffff;
+  --c-elevated: #f7f8fa;
+  --c-line: #dfe2e6;
+  --c-hover: #eceef1;
+  --c-stage: #d9dbde;
+  --c-hi: #17191c;
+  --c-lo: #5f6770;
+  --c-accent: #3867ef;
+  --c-accent-soft: rgba(56, 103, 239, 0.12);
+  --c-on-accent: #ffffff;
+  --c-danger: #cf3f3f;
+  --c-on-danger: #ffffff;
+  --c-ring: rgba(56, 103, 239, 0.55);
+}
+
+.dark {
+  --c-app: #0c0d10;
+  --c-panel: #141619;
+  --c-elevated: #1c1f24;
+  --c-line: #272b31;
+  --c-hover: #22262b;
+  --c-stage: #08090b;
+  --c-hi: #e9ecef;
+  --c-lo: #8b939d;
+  --c-accent: #5b8bff;
+  --c-accent-soft: rgba(91, 139, 255, 0.15);
+  --c-on-accent: #0c0d10;
+  --c-danger: #e25555;
+  --c-on-danger: #0c0d10;
+  --c-ring: rgba(91, 139, 255, 0.6);
+}
+
+@theme inline {
+  --color-app: var(--c-app);
+  --color-panel: var(--c-panel);
+  --color-elevated: var(--c-elevated);
+  --color-line: var(--c-line);
+  --color-hover: var(--c-hover);
+  --color-stage: var(--c-stage);
+  --color-hi: var(--c-hi);
+  --color-lo: var(--c-lo);
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-onaccent: var(--c-on-accent);
+  --color-danger: var(--c-danger);
+  --color-ondanger: var(--c-on-danger);
+  --color-ring: var(--c-ring);
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-app text-hi antialiased;
+    font-family:
+      ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto,
+      'Helvetica Neue', Arial, sans-serif;
+    overscroll-behavior: none;
+  }
+  ::selection {
+    background: var(--c-accent-soft);
+  }
+  :focus-visible {
+    outline: 2px solid var(--c-ring);
+    outline-offset: 1px;
+  }
+  /* Slim, unobtrusive scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--c-line) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--c-line);
+    border-radius: 8px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--c-hover);
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Radix mount/unmount micro-animations
+--------------------------------------------------------------------------- */
+@keyframes fs-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fs-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes fs-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes fs-pop-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.97);
+  }
+}
+@keyframes fs-pop-y-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes fs-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fs-anim-overlay-in {
+  animation: fs-fade-in 0.15s ease-out;
+}
+.fs-anim-overlay-out {
+  animation: fs-fade-out 0.12s ease-in forwards;
+}
+.fs-anim-content-in {
+  animation: fs-pop-in 0.16s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.fs-anim-content-out {
+  animation: fs-pop-out 0.12s ease-in forwards;
+}
+.fs-anim-menu-in {
+  animation: fs-pop-y-in 0.13s ease-out;
+}
+.fs-anim-toast-in {
+  animation: fs-toast-in 0.2s ease-out;
+}
+
+/* ---------------------------------------------------------------------------
+   Touch affordances. Hover-only controls are invisible on finger input, so
+   coarse pointers reveal them and get larger hit targets (44 px guideline).
+--------------------------------------------------------------------------- */
+@media (pointer: coarse) {
+  .fs-hover-actions {
+    display: flex !important;
+  }
+  .fs-tool-hit {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+  }
+  .fs-trim-handle {
+    width: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fs-anim-overlay-in,
+  .fs-anim-overlay-out,
+  .fs-anim-content-in,
+  .fs-anim-content-out,
+  .fs-anim-menu-in,
+  .fs-anim-toast-in {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
