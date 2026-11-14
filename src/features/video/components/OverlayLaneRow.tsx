@@ -7,6 +7,8 @@ import { MIN_OVERLAY_OUT, type OverlayClip } from '../sequenceModel'
  * One overlay track lane: a scrub bar holding one or more layer blocks.
  * The base-track overlays render in a single text lane; each media layer
  * gets its own lane — real stacked video/image tracks (CapCut-style).
+ * On touch devices all rows share one pan/zoom viewport (fixed center
+ * playhead in the parent), so positions map through px-per-second.
  */
 
 export interface OverlayLaneRowProps {
@@ -22,6 +24,12 @@ export interface OverlayLaneRowProps {
   onToggleMute?: (id: string) => void
   /** Z-order: move a layer earlier/later in the overlay stack. */
   onMoveOverlay?: (id: string, dir: -1 | 1) => void
+  /** Touch px-viewport mapping shared with the base track (null = desktop). */
+  mobile?: { pxPerSec: number; viewStart: number } | null
+  /** Shared pan/pinch gesture handlers (touch only). */
+  onPanDown?: (e: React.PointerEvent<HTMLDivElement>) => void
+  onPanMove?: (e: React.PointerEvent<HTMLDivElement>) => void
+  onPanUp?: (e: React.PointerEvent<HTMLDivElement>) => void
   /** Optional thumbnail element for a media layer's chip. */
   chipThumb?: (o: OverlayClip) => ReactNode
 }
@@ -38,6 +46,10 @@ export function OverlayLaneRow({
   onTiming,
   onToggleMute,
   onMoveOverlay,
+  mobile = null,
+  onPanDown,
+  onPanMove,
+  onPanUp,
   chipThumb,
 }: OverlayLaneRowProps): ReactNode {
   const laneRef = useRef<HTMLDivElement>(null)
@@ -46,11 +58,13 @@ export function OverlayLaneRow({
   const laneTime = useCallback(
     (clientX: number): number => {
       const el = laneRef.current
-      if (!el || total <= 0) return 0
+      if (!el) return 0
       const rect = el.getBoundingClientRect()
+      if (mobile && mobile.pxPerSec > 0) return mobile.viewStart + (clientX - rect.left) / mobile.pxPerSec
+      if (total <= 0) return 0
       return Math.max(0, ((clientX - rect.left) / Math.max(1, rect.width)) * total)
     },
-    [total],
+    [mobile, total],
   )
 
   const snapTime = useCallback(
@@ -65,7 +79,7 @@ export function OverlayLaneRow({
   return (
     <div
       ref={laneRef}
-      className="relative h-6 min-w-0 touch-none select-none rounded-md bg-elevated/60"
+      className="relative h-6 min-w-0 touch-none select-none overflow-hidden rounded-md bg-elevated/60"
       role="slider"
       aria-label={`${laneLabel} playhead`}
       aria-valuemin={0}
@@ -74,8 +88,23 @@ export function OverlayLaneRow({
       tabIndex={0}
       onPointerDown={(e) => {
         if (e.button !== 0) return
+        if (onPanDown) {
+          // Touch: pan the shared viewport (seek follows the center playhead).
+          onSelect('')
+          onPanDown(e)
+          return
+        }
         onSelect('')
         onSeek(laneTime(e.clientX))
+      }}
+      onPointerMove={(e) => {
+        if (onPanMove && mobile) onPanMove(e)
+      }}
+      onPointerUp={(e) => {
+        if (onPanUp && mobile) onPanUp(e)
+      }}
+      onPointerCancel={(e) => {
+        if (onPanUp && mobile) onPanUp(e)
       }}
       aria-orientation="horizontal"
     >
@@ -90,8 +119,10 @@ export function OverlayLaneRow({
               'cursor-move',
             )}
             style={{
-              left: `${(o.start / total) * 100}%`,
-              width: `${Math.max(0.8, (o.duration / total) * 100)}%`,
+              left: mobile ? (o.start - mobile.viewStart) * mobile.pxPerSec : `${(o.start / total) * 100}%`,
+              width: mobile
+                ? `${Math.max(3, o.duration * mobile.pxPerSec)}px`
+                : `${Math.max(0.8, (o.duration / total) * 100)}%`,
               zIndex: 10 + index,
             }}
             onPointerDown={(e) => {
@@ -241,12 +272,14 @@ export function OverlayLaneRow({
           </div>
         )
       })}
-      {/* Playhead (mirrors the base track) */}
-      <div
-        className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-white/90"
-        style={{ left: `${(Math.min(currentTime, total) / total) * 100}%` }}
-        aria-hidden
-      />
+      {/* Playhead (desktop; touch uses the parent's shared fixed center one) */}
+      {!mobile ? (
+        <div
+          className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-white/90"
+          style={{ left: `${(Math.min(currentTime, total) / total) * 100}%` }}
+          aria-hidden
+        />
+      ) : null}
     </div>
   )
 }

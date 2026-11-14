@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useRef, type ReactNode } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, Copy, Scissors, Square, Sun, Trash2, Blend, Type, Move, Circle, ZoomIn, Droplets } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { formatDuration } from '../../../core/format'
@@ -18,6 +18,11 @@ import { OverlayLaneRow } from './OverlayLaneRow'
 const HANDLE_GRAB_PX =
   typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 18 : 10
 const MIN_TRIM_SRC = 0.1
+const ZOOM_MAX = 12
+
+/** Touch devices get the CapCut-style timeline: pinch-zoom + fixed center playhead. */
+const IS_TOUCH =
+  typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches
 
 export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): ReactNode {
   const clips = useVideoEditor((s) => s.sequence)
@@ -76,6 +81,133 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   // Clip drag-reorder on the base track (grab the block and move it).
   const segDrag = useRef<{ id: string; grabOffset: number; mids: { id: string; mid: number }[]; moved: boolean; lastTo: number } | null>(null)
 
+  // --- Touch timeline: px-per-second mapping, pan + pinch, fixed center playhead.
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const [viewportW, setViewportW] = useState(0)
+  const [zoom, setZoom] = useState(1)
+  const [viewStart, setViewStart] = useState(0)
+  const zoomedRef = useRef(false)
+  const pxPerSec = IS_TOUCH && viewportW > 0 ? (viewportW / total) * zoom : 0
+  const pxRef = useRef(0)
+  const vsRef = useRef(0)
+  pxRef.current = pxPerSec
+  vsRef.current = viewStart
+  const viewportSec = pxPerSec > 0 ? viewportW / pxPerSec : total
+  const gesture = useRef<
+    | { kind: 'pan'; pointerId: number; startX: number; startView: number; moved: boolean }
+    | { kind: 'pinch'; dist0: number; zoom0: number; anchorTime: number; mid0X: number }
+    | null
+  >(null)
+  const activePointers = useRef(new Map<number, { x: number; y: number }>())
+
+  useEffect(() => {
+    if (!IS_TOUCH) return
+    const el = wrapRef.current
+    if (!el) return
+    const ro = new ResizeObserver(() => setViewportW(el.getBoundingClientRect().width))
+    ro.observe(el)
+    setViewportW(el.getBoundingClientRect().width)
+    return () => ro.disconnect()
+  }, [])
+
+  /** Keeps viewStart within its legal range (playhead time ∈ [0, total]). */
+  const clampView = useCallback(
+    (v: number): number => {
+      const half = viewportSec / 2
+      return Math.min(Math.max(v, -half), Math.max(-half, total - half))
+    },
+    [total, viewportSec],
+  )
+
+  // External seeks / playback: keep currentTime under the fixed center playhead
+  // (content auto-scrolls) unless the user is mid-gesture.
+  useEffect(() => {
+    if (!IS_TOUCH || pxPerSec <= 0 || gesture.current) return
+    setViewStart(clampView(currentTime - viewportSec / 2))
+  }, [currentTime, viewportSec, total, pxPerSec, clampView])
+
+  const seekCenter = useCallback(
+    (v?: number): void => {
+      onSeek((v ?? vsRef.current) + viewportSec / 2)
+    },
+    [onSeek, viewportSec],
+  )
+
+  const beginGesture = useCallback((e: React.PointerEvent<HTMLElement>): void => {
+    if (!IS_TOUCH || pxRef.current <= 0 || e.button !== 0) return
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // synthetic or already-released pointers
+    }
+    if (activePointers.current.size === 2) {
+      // Second finger down: convert to a pinch anchored on the midpoint.
+      const pts = [...activePointers.current.values()]
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const midX = (pts[0].x + pts[1].x) / 2
+      const el = e.currentTarget as HTMLElement
+      const rect = el.getBoundingClientRect()
+      const anchorTime = vsRef.current + (midX - rect.left) / pxRef.current
+      gesture.current = { kind: 'pinch', dist0: Math.max(20, dist), zoom0: zoomedRef.current ? zoom : 1, anchorTime, mid0X: midX }
+      return
+    }
+    gesture.current = { kind: 'pan', pointerId: e.pointerId, startX: e.clientX, startView: vsRef.current, moved: false }
+  }, [zoom])
+
+  const moveGesture = useCallback(
+    (e: React.PointerEvent<HTMLElement>): void => {
+      if (!IS_TOUCH || pxRef.current <= 0) return
+      const g = gesture.current
+      if (!g) return
+      if (g.kind === 'pan') {
+        if (e.pointerId !== g.pointerId || e.buttons === 0) return
+        const dx = e.clientX - g.startX
+        if (!g.moved && Math.abs(dx) < 4) return
+        g.moved = true
+        const v = clampView(g.startView - dx / pxRef.current)
+        setViewStart(v)
+        seekCenter(v)
+        return
+      }
+      // Pinch: zoom around the anchor time, re-pan so the anchor stays put.
+      activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      const pts = [...activePointers.current.values()]
+      if (pts.length < 2) return
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y)
+      const midX = (pts[0].x + pts[1].x) / 2
+      const el = e.currentTarget as HTMLElement
+      const rect = el.getBoundingClientRect()
+      const zoomNext = Math.min(ZOOM_MAX, Math.max(1, g.zoom0 * (dist / g.dist0)))
+      const pxNext = (viewportW / total) * zoomNext
+      if (Math.abs(pxNext - pxRef.current) < 0.01 && Math.abs(midX - g.mid0X) < 1) return
+      if (zoomNext > 1.001) zoomedRef.current = true
+      setZoom(zoomNext)
+      const vFinal = clampView(g.anchorTime - (midX - rect.left) / pxNext)
+      setViewStart(vFinal)
+      seekCenter(vFinal)
+    },
+    [clampView, seekCenter, total, viewportW],
+  )
+
+  const endGesture = useCallback((e: React.PointerEvent<HTMLElement>): void => {
+    activePointers.current.delete(e.pointerId)
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // synthetic or already-released pointers
+    }
+    const g = gesture.current
+    if (g && g.kind === 'pan' && !g.moved) {
+      // Tap (no drag): seek to the tapped time — the follow effect then
+      // scrolls that point under the fixed center playhead.
+      const el = trackRef.current
+      const rect = el?.getBoundingClientRect()
+      if (rect && pxRef.current > 0) onSeek(vsRef.current + (e.clientX - rect.left) / pxRef.current)
+    }
+    if (activePointers.current.size === 0) gesture.current = null
+  }, [onSeek])
+
   const onSegmentGrab = useCallback(
     (entry: { clip: VideoClip; globalStart: number; out: number }, t: number): void => {
       setActiveClip(entry.clip.id)
@@ -124,10 +256,22 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       const el = trackRef.current
       if (!el) return 0
       const rect = el.getBoundingClientRect()
+      // Touch mode maps through the pan/zoom viewport; desktop fits the
+      // whole sequence to the lane width.
+      if (IS_TOUCH && pxPerSec > 0) return viewStart + (clientX - rect.left) / pxPerSec
       const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width))
       return ratio * total
     },
-    [total],
+    [pxPerSec, total, viewStart],
+  )
+
+  /** Screen-x of a sequence time (mobile px viewport vs desktop fit). */
+  const xOf = useCallback(
+    (t: number, rectWidth: number): number => {
+      if (IS_TOUCH && pxPerSec > 0) return (t - viewStart) * pxPerSec
+      return (t / total) * rectWidth
+    },
+    [pxPerSec, total, viewStart],
   )
 
   const onPointerDown = useCallback(
@@ -136,17 +280,25 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       if (!el || e.button !== 0) return
       const rect = el.getBoundingClientRect()
       const t = timeAt(e.clientX)
-      // Selected clip's edges trim; anything else scrubs.
+      // Selected clip's edges trim; anything else scrubs (desktop) or pans
+      // under the fixed center playhead (touch).
       const index = layout.entries.findIndex((entry) => entry.clip.id === activeClipId)
+      let edge = false
       if (index >= 0) {
         const entry = layout.entries[index]
-        const leftPx = (entry.globalStart / total) * rect.width
-        const rightPx = ((entry.globalStart + entry.out) / total) * rect.width
+        const leftPx = xOf(entry.globalStart, rect.width)
+        const rightPx = xOf(entry.globalStart + entry.out, rect.width)
         if (Math.abs(e.clientX - rect.left - leftPx) <= HANDLE_GRAB_PX) dragMode.current = 'start'
         else if (Math.abs(e.clientX - rect.left - rightPx) <= HANDLE_GRAB_PX) dragMode.current = 'end'
         else dragMode.current = 'scrub'
+        edge = dragMode.current !== 'scrub'
       } else {
         dragMode.current = 'scrub'
+      }
+      if (IS_TOUCH && pxPerSec > 0 && !edge) {
+        // Touch: pan/pinch gesture instead of a direct scrub.
+        beginGesture(e)
+        return
       }
       try {
         el.setPointerCapture(e.pointerId)
@@ -155,7 +307,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       }
       if (dragMode.current === 'scrub') onSeek(t)
     },
-    [activeClipId, layout.entries, onSeek, timeAt, total],
+    [activeClipId, beginGesture, layout.entries, onSeek, timeAt, xOf],
   )
 
   const onPointerMove = useCallback(
@@ -166,6 +318,10 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       if (!el) return
       const mode = dragMode.current
       if (mode === 'scrub') {
+        if (IS_TOUCH && pxPerSec > 0 && gesture.current) {
+          moveGesture(e)
+          return
+        }
         onSeek(timeAt(e.clientX))
         return
       }
@@ -190,7 +346,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         setTrimLive(clip.edit.trimStart, clamped)
       }
     },
-    [activeClipId, assets, durations, layout.entries, onSeek, setTrimLive, timeAt],
+    [activeClipId, assets, durations, layout.entries, moveGesture, onSeek, pxPerSec, setTrimLive, timeAt],
   )
 
   const finish = useCallback(
@@ -198,6 +354,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       const el = trackRef.current
       if (!el) return
       if (dragMode.current !== 'scrub') commitTrim()
+      else if (IS_TOUCH && pxPerSec > 0) endGesture(e)
       dragMode.current = 'scrub'
       try {
         el.releasePointerCapture(e.pointerId)
@@ -205,7 +362,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         // synthetic or already-released pointers
       }
     },
-    [commitTrim],
+    [commitTrim, endGesture, pxPerSec],
   )
 
   if (clips.length === 0) {
@@ -220,6 +377,8 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   }
 
   const canOperate = activeClipId !== null
+
+  const mobileMap = IS_TOUCH && pxPerSec > 0 ? { pxPerSec, viewStart } : null
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -255,11 +414,21 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         </span>
       </div>
 
+      {/* All rows share one pan/zoom viewport on touch — the playhead is
+          fixed at the horizontal center and clips scroll underneath it. */}
+      <div ref={wrapRef} className="relative flex min-w-0 flex-col gap-1">
+        {mobileMap ? (
+          <div
+            className="pointer-events-none absolute inset-y-0 left-1/2 z-40 w-0.5 -translate-x-1/2 bg-white/90"
+            aria-hidden
+          />
+        ) : null}
+
       {/* The track */}
       <div
         ref={trackRef}
         data-sequence-track
-        className="relative h-14 min-w-0 touch-none select-none rounded-md bg-elevated outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="relative h-14 min-w-0 touch-none select-none overflow-hidden rounded-md bg-elevated outline-none focus-visible:ring-2 focus-visible:ring-accent"
         role="slider"
         aria-label="Sequence playhead"
         aria-valuemin={0}
@@ -278,19 +447,22 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
             index={index}
             total={total}
             selected={entry.clip.id === activeClipId}
+            mobile={mobileMap}
             onGrab={onSegmentGrab}
             onDrag={onSegmentDrag}
             onRelease={onSegmentRelease}
           />
         ))}
         {/* Beat grid (from the music track's local analysis). */}
-        <BeatMarkers total={total} />
-        {/* Playhead */}
-        <div
-          className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-white/90"
-          style={{ left: `${(Math.min(currentTime, total) / total) * 100}%` }}
-          aria-hidden
-        />
+        <BeatMarkers total={total} mobile={mobileMap} />
+        {/* Playhead (desktop; touch uses the shared fixed center one) */}
+        {!mobileMap ? (
+          <div
+            className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-white/90"
+            style={{ left: `${(Math.min(currentTime, total) / total) * 100}%` }}
+            aria-hidden
+          />
+        ) : null}
       </div>
 
       {/* Overlay track lanes: text layers share one lane; every media layer
@@ -306,6 +478,10 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
           onSelect={setActiveOverlay}
           onRemove={removeOverlay}
           onTiming={setOverlayTiming}
+          mobile={mobileMap}
+          onPanDown={beginGesture}
+          onPanMove={moveGesture}
+          onPanUp={endGesture}
         />
       ) : null}
       {mediaLanes.map((lane) => (
@@ -322,9 +498,14 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
           onTiming={setOverlayTiming}
           onToggleMute={(id) => setOverlayMuted(id, !(overlays.find((o) => o.id === id)?.muted ?? false))}
           onMoveOverlay={moveOverlay}
+          mobile={mobileMap}
+          onPanDown={beginGesture}
+          onPanMove={moveGesture}
+          onPanUp={endGesture}
           chipThumb={(layer) => <LaneThumb assetId={layer.assetId} />}
         />
       ))}
+      </div>
     </div>
   )
 }
@@ -356,6 +537,8 @@ interface SegmentProps {
   index: number
   total: number
   selected: boolean
+  /** Touch px-viewport mapping (null on desktop: fit-to-lane percentages). */
+  mobile: { pxPerSec: number; viewStart: number } | null
   /** Drag-reorder hooks (sequence time under the pointer is passed in). */
   onGrab: (entry: SegmentProps['entry'], t: number) => void
   onDrag: (entry: SegmentProps['entry'], t: number) => void
@@ -367,6 +550,7 @@ const TimelineSegment = memo(function TimelineSegment({
   index,
   total,
   selected,
+  mobile,
   onGrab,
   onDrag,
   onRelease,
@@ -374,8 +558,8 @@ const TimelineSegment = memo(function TimelineSegment({
   const assetId = entry.clip.assetId
   const asset = useAssets()?.find((a) => a.id === assetId)
   const thumb = useThumbnail(asset)
-  const left = (entry.globalStart / total) * 100
-  const width = (entry.out / total) * 100
+  const left = mobile ? (entry.globalStart - mobile.viewStart) * mobile.pxPerSec : (entry.globalStart / total) * 100
+  const width = mobile ? entry.out * mobile.pxPerSec : (entry.out / total) * 100
   const transition = entry.clip.transition
 
   /** Sequence-time under the pointer (same mapping the scrub lane uses). */
@@ -383,6 +567,7 @@ const TimelineSegment = memo(function TimelineSegment({
     const track = (e.target as HTMLElement)?.closest('[data-sequence-track]')
     if (!track) return entry.globalStart
     const rect = track.getBoundingClientRect()
+    if (mobile) return mobile.viewStart + (e.clientX - rect.left) / mobile.pxPerSec
     return ((e.clientX - rect.left) / Math.max(1, rect.width)) * total
   }
 
@@ -395,8 +580,8 @@ const TimelineSegment = memo(function TimelineSegment({
         'cursor-grab touch-none',
       )}
       style={{
-        left: `${left}%`,
-        width: `${Math.max(0.4, width)}%`,
+        left: mobile ? left : `${left}%`,
+        width: Math.max(mobile ? 3 : 0.4, width) + (mobile ? 'px' : '%'),
         zIndex: 10 + index,
       }}
       aria-label={`Clip ${index + 1}${selected ? ' (selected)' : ''}`}
@@ -475,7 +660,7 @@ const TimelineSegment = memo(function TimelineSegment({
 })
 
 /** Faint ticks along the track showing the music track's detected beats. */
-function BeatMarkers({ total }: { total: number }): ReactNode {
+function BeatMarkers({ total, mobile }: { total: number; mobile: { pxPerSec: number; viewStart: number } | null }): ReactNode {
   const music = useVideoEditor((s) => s.music)
   const beats = music?.beats
   if (!beats || beats.length === 0 || total <= 0) return null
@@ -488,7 +673,7 @@ function BeatMarkers({ total }: { total: number }): ReactNode {
           <div
             key={beat}
             className="absolute inset-y-0 w-px bg-accent/25"
-            style={{ left: `${(beat / total) * 100}%` }}
+            style={mobile ? { left: (beat - mobile.viewStart) * mobile.pxPerSec } : { left: `${(beat / total) * 100}%` }}
           />
         ))}
     </div>
