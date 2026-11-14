@@ -4,7 +4,7 @@ import { cn } from '../../../lib/cn'
 import { formatDuration } from '../../../core/format'
 import { useVideoEditor, layoutOf } from '../store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
-import { TRANSITION_LABELS, type VideoClip, type VideoTransition } from '../sequenceModel'
+import { TRANSITION_LABELS, type OverlayClip, type VideoClip, type VideoTransition } from '../sequenceModel'
 import { Tooltip } from '../../../ui/tooltip'
 import { OverlayLaneRow } from './OverlayLaneRow'
 
@@ -25,6 +25,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   const activeOverlayId = useVideoEditor((s) => s.activeOverlayId)
   const setActiveOverlay = useVideoEditor((s) => s.setActiveOverlay)
   const removeOverlay = useVideoEditor((s) => s.removeOverlay)
+  const moveOverlay = useVideoEditor((s) => s.moveOverlay)
   const setOverlayTiming = useVideoEditor((s) => s.setOverlayTiming)
   const durations = useVideoEditor((s) => s.durations)
   const activeClipId = useVideoEditor((s) => s.activeClipId)
@@ -44,6 +45,32 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   const total = Math.max(0.0001, layout.total)
   const textOverlays = useMemo(() => overlays.filter((o) => o.kind === 'text'), [overlays])
   const mediaOverlays = useMemo(() => overlays.filter((o) => o.kind !== 'text'), [overlays])
+  /**
+   * Multi-track lane packing: media layers that never overlap in time share
+   * one lane (sequential b-roll reads as a single track); overlapping layers
+   * stack into new lanes below. Greedy interval packing, first-fit.
+   */
+  const mediaLanes = useMemo(() => {
+    const sorted = [...mediaOverlays].sort((a, b) => a.start - b.start)
+    const laneEnds: number[] = []
+    const groups: OverlayClip[][] = []
+    for (const o of sorted) {
+      let placed = false
+      for (let i = 0; i < laneEnds.length; i++) {
+        if (o.start >= laneEnds[i] - 1e-6) {
+          groups[i].push(o)
+          laneEnds[i] = o.start + o.duration
+          placed = true
+          break
+        }
+      }
+      if (!placed) {
+        groups.push([o])
+        laneEnds.push(o.start + o.duration)
+      }
+    }
+    return groups
+  }, [mediaOverlays])
   const trackRef = useRef<HTMLDivElement>(null)
   const dragMode = useRef<'scrub' | 'start' | 'end'>('scrub')
   // Clip drag-reorder on the base track (grab the block and move it).
@@ -281,25 +308,23 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
           onTiming={setOverlayTiming}
         />
       ) : null}
-      {mediaOverlays.map((o) => {
-        const asset = assets?.find((a) => a.id === o.assetId)
-        return (
-          <OverlayLaneRow
-            key={o.id}
-            laneLabel={`${o.kind === 'video' ? 'Video' : 'Image'} layer — ${asset?.name ?? ''}`}
-            overlays={[o]}
-            total={total}
-            currentTime={currentTime}
-            onSeek={onSeek}
-            selectedId={activeOverlayId}
-            onSelect={setActiveOverlay}
-            onRemove={removeOverlay}
-            onTiming={setOverlayTiming}
-            onToggleMute={(id) => setOverlayMuted(id, !(overlays.find((o) => o.id === id)?.muted ?? false))}
-            chipThumb={(layer) => <LaneThumb assetId={layer.assetId} />}
-          />
-        )
-      })}
+      {mediaLanes.map((lane) => (
+        <OverlayLaneRow
+          key={lane.map((o) => o.id).join(':')}
+          laneLabel={`Media layer — ${lane.map((o) => assets?.find((a) => a.id === o.assetId)?.name ?? o.kind).join(' → ')}`}
+          overlays={lane}
+          total={total}
+          currentTime={currentTime}
+          onSeek={onSeek}
+          selectedId={activeOverlayId}
+          onSelect={setActiveOverlay}
+          onRemove={removeOverlay}
+          onTiming={setOverlayTiming}
+          onToggleMute={(id) => setOverlayMuted(id, !(overlays.find((o) => o.id === id)?.muted ?? false))}
+          onMoveOverlay={moveOverlay}
+          chipThumb={(layer) => <LaneThumb assetId={layer.assetId} />}
+        />
+      ))}
     </div>
   )
 }

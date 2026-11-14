@@ -1,5 +1,5 @@
 import { useCallback, useRef, type ReactNode } from 'react'
-import { Volume2, VolumeX, Trash2 } from 'lucide-react'
+import { Volume2, VolumeX, Trash2, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { MIN_OVERLAY_OUT, type OverlayClip } from '../sequenceModel'
 
@@ -20,6 +20,8 @@ export interface OverlayLaneRowProps {
   onRemove: (id: string) => void
   onTiming: (id: string, start: number, duration: number) => void
   onToggleMute?: (id: string) => void
+  /** Z-order: move a layer earlier/later in the overlay stack. */
+  onMoveOverlay?: (id: string, dir: -1 | 1) => void
   /** Optional thumbnail element for a media layer's chip. */
   chipThumb?: (o: OverlayClip) => ReactNode
 }
@@ -35,6 +37,7 @@ export function OverlayLaneRow({
   onRemove,
   onTiming,
   onToggleMute,
+  onMoveOverlay,
   chipThumb,
 }: OverlayLaneRowProps): ReactNode {
   const laneRef = useRef<HTMLDivElement>(null)
@@ -186,6 +189,38 @@ export function OverlayLaneRow({
               >
                 {o.muted ? <VolumeX size={8} /> : <Volume2 size={8} />}
               </button>
+            ) : null}
+            {onMoveOverlay ? (
+              <>
+                <button
+                  type="button"
+                  className={cn(
+                    'absolute right-3.5 top-0 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-black/60 text-hi/90 hover:bg-black/80',
+                    o.kind === 'video' && onToggleMute ? 'top-4' : 'top-0',
+                  )}
+                  aria-label="Bring layer forward"
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    onMoveOverlay(o.id, 1)
+                  }}
+                >
+                  <ArrowUp size={8} />
+                </button>
+                <button
+                  type="button"
+                  className={cn(
+                    'absolute right-7 top-0 flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-black/60 text-hi/90 hover:bg-black/80',
+                    o.kind === 'video' && onToggleMute ? 'top-4' : 'top-0',
+                  )}
+                  aria-label="Send layer backward"
+                  onPointerDown={(e) => {
+                    e.stopPropagation()
+                    onMoveOverlay(o.id, -1)
+                  }}
+                >
+                  <ArrowDown size={8} />
+                </button>
+              </>
             ) : null}
             {selected ? (
               <button
