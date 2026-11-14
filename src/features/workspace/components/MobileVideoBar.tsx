@@ -34,6 +34,8 @@ export function MobileVideoBar(): ReactNode {
           role="toolbar"
           aria-label="Clip tools"
         >
+          <BarButton icon={<Undo2 size={18} />} label="Undo" onPress={undo} className="min-w-[3.25rem] shrink-0" />
+          <BarButton icon={<Redo2 size={18} />} label="Redo" onPress={redo} className="min-w-[3.25rem] shrink-0" />
           <BarButton icon={<Scissors size={18} />} label="Split" onPress={splitAtPlayhead} className="min-w-[4.25rem] shrink-0" />
           <BarButton
             icon={<Gauge size={18} />}
