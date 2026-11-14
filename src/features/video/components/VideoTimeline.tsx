@@ -5,8 +5,10 @@ import { formatDuration } from '../../../core/format'
 import { useVideoEditor, layoutOf } from '../store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { TRANSITION_LABELS, type OverlayClip, type VideoClip, type VideoTransition } from '../sequenceModel'
+import type { MediaAsset } from '../../../core/db/schema'
 import { Tooltip } from '../../../ui/tooltip'
 import { OverlayLaneRow } from './OverlayLaneRow'
+import { useWaveform } from '../waveform'
 
 /**
  * The sequence timeline: each clip is a proportional segment (trimmed length
@@ -521,6 +523,23 @@ function LaneThumb({ assetId }: { assetId?: string }): ReactNode {
   return <img src={thumb} alt="" className="h-4 w-6 shrink-0 rounded-sm object-cover" aria-hidden />
 }
 
+/** CapCut-style symmetric audio waveform drawn along the clip's bottom edge. */
+function ClipWaveform({ asset }: { asset?: MediaAsset | null }): ReactNode {
+  const peaks = useWaveform(asset && asset.kind !== 'image' ? asset : null)
+  if (!peaks || peaks.length === 0) return null
+  return (
+    <div className="pointer-events-none absolute inset-x-1 bottom-1 z-[2] flex h-2.5 items-center gap-px" aria-hidden>
+      {peaks.map((p, i) => (
+        <span
+          key={i}
+          className="min-w-px flex-1 rounded-full bg-white/75"
+          style={{ height: `${Math.max(10, p * 100)}%` }}
+        />
+      ))}
+    </div>
+  )
+}
+
 /** Family glyph shown on the clip's transition badge. */
 function TransitionIcon({ type }: { type: VideoTransition }): ReactNode {
   if (type === 'dissolve') return <Blend size={8} />
@@ -623,9 +642,10 @@ const TimelineSegment = memo(function TimelineSegment({
       }}
     >
       {thumb ? (
-        <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover opacity-45" aria-hidden />
+        <img src={thumb} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90" aria-hidden />
       ) : null}
-      <div className={cn('absolute inset-0', selected ? 'bg-accent/15' : 'bg-black/30')} aria-hidden />
+      <div className="absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
+      <ClipWaveform asset={asset} />
       <div className="absolute inset-x-1 top-0.5 flex items-center gap-1">
         <span className="truncate text-[10px] font-medium text-hi" aria-hidden>
           {asset?.name ?? 'Clip'}
