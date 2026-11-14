@@ -370,10 +370,16 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   if (clips.length === 0) {
     return (
       <div
-        className="flex h-16 min-w-0 flex-1 items-center justify-center rounded-md bg-elevated text-xs text-lo"
+        className="flex h-28 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-line bg-elevated text-center"
         role="status"
       >
-        Empty timeline — add clips from the library above.
+        <span className="text-2xl leading-none text-lo" aria-hidden>
+          ＋
+        </span>
+        <span className="text-xs font-medium text-hi">Add video clips to start editing</span>
+        <span className="max-w-56 text-[11px] leading-snug text-lo">
+          Import videos in the library, then tap one and choose “Add to project”. Tap a clip here any time to edit it.
+        </span>
       </div>
     )
   }
@@ -382,33 +388,51 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
 
   const mobileMap = IS_TOUCH && pxPerSec > 0 ? { pxPerSec, viewStart } : null
 
+  /** Beginner hint: what to do next, based on what's selected. */
+  const hint = activeOverlayId !== null
+    ? 'Layer selected — drag it, trim its edges, or use the sheet to edit it'
+    : activeClipId !== null
+      ? 'Clip selected — drag the white handles to trim, or use the tools below'
+      : 'Tap a clip to edit it · pinch to zoom · drag the track to scrub'
+
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
-      {/* Clip operations toolbar */}
+      {!IS_TOUCH ? null : (
+        <p className="truncate px-0.5 text-[10px] leading-tight text-lo" role="status">
+          {hint}
+        </p>
+      )}
+      {/* Clip operations toolbar — labeled on touch devices so beginners
+          can read what each tool does (desktop relies on tooltips). */}
       <div className="flex items-center gap-1">
         <Tooltip content="Split the selected clip at the playhead (Scissors)">
           <button type="button" onClick={splitAtPlayhead} disabled={!canOperate} className={toolBtn} aria-label="Split clip at playhead">
             <Scissors size={12} />
+            <span className="fs-tool-label">Split</span>
           </button>
         </Tooltip>
         <Tooltip content="Move clip earlier">
           <button type="button" onClick={() => activeClipId && moveClip(activeClipId, -1)} disabled={!canOperate} className={toolBtn} aria-label="Move clip earlier">
             <ArrowLeft size={12} />
+            <span className="fs-tool-label">Earlier</span>
           </button>
         </Tooltip>
         <Tooltip content="Move clip later">
           <button type="button" onClick={() => activeClipId && moveClip(activeClipId, 1)} disabled={!canOperate} className={toolBtn} aria-label="Move clip later">
             <ArrowRight size={12} />
+            <span className="fs-tool-label">Later</span>
           </button>
         </Tooltip>
         <Tooltip content="Duplicate clip">
           <button type="button" onClick={() => activeClipId && duplicateClip(activeClipId)} disabled={!canOperate} className={toolBtn} aria-label="Duplicate clip">
             <Copy size={12} />
+            <span className="fs-tool-label">Copy</span>
           </button>
         </Tooltip>
         <Tooltip content="Delete clip">
           <button type="button" onClick={() => activeClipId && removeClip(activeClipId)} disabled={!canOperate} className={cn(toolBtn, 'text-danger')} aria-label="Delete clip">
             <Trash2 size={12} />
+            <span className="fs-tool-label">Delete</span>
           </button>
         </Tooltip>
         <span className="ml-auto pr-1 text-[10px] tabular-nums text-lo" aria-hidden>
@@ -513,7 +537,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
 }
 
 const toolBtn =
-  'fs-tool-hit flex h-6 w-6 items-center justify-center rounded-md text-hi/80 text-lo hover:bg-hover hover:text-hi disabled:opacity-30'
+  'fs-tool-hit flex h-6 items-center justify-center gap-1 rounded-md px-1 text-hi/80 text-lo hover:bg-hover hover:text-hi disabled:opacity-30'
 
 /** Small thumbnail for a media layer's timeline chip. */
 function LaneThumb({ assetId }: { assetId?: string }): ReactNode {

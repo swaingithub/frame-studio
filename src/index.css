@@ -205,6 +205,19 @@
   -webkit-mask-image: linear-gradient(to right, black calc(100% - 1.25rem), transparent 100%);
 }
 
+/* Timeline tool labels: words for beginners on touch, icon-only on desktop. */
+.fs-tool-label {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .fs-tool-label {
+    display: inline;
+    font-size: 0.625rem;
+    line-height: 1;
+  }
+}
+
 @media (pointer: coarse) {
   .fs-hover-actions {
     display: flex !important;
