@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AlertTriangle, Download, Eye, Pause, Play } from 'lucide-react'
+import { AlertTriangle, Camera, Download, Eye, Pause, Play, ShieldQuestion } from 'lucide-react'
 import { createDefaultEditDoc, defaultGeometry, type GeometryValues } from '../../../core/adjustments/edits'
 import { computeHistogram, type Histogram } from '../../../core/render/histogram'
 import { containRect, coverRect } from '../../../core/render/fit'
@@ -83,6 +83,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
   const [fallback, setFallback] = useState(false)
   const [recording, setRecording] = useState<{ done: number; total: number } | null>(null)
   const [recordError, setRecordError] = useState<string | null>(null)
+  const [showSafeZones, setShowSafeZones] = useState(false)
   // Bumped when the background-removal model finishes loading so paused
   // frames repaint with their new mask.
   const [segVersion, setSegVersion] = useState(0)
@@ -1092,8 +1093,20 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
     }
   }, [togglePlay])
 
-  const startExport = useCallback(async (): Promise<void> => {
+  /** Saves the current preview frame as the Reel cover / YouTube thumbnail. */
+  const saveCoverFrame = useCallback(async (): Promise<void> => {
     const out = outCanvasRef.current
+    if (!out || out.width === 0) return
+    try {
+      const blob = await new Promise<Blob | null>((resolve) => out.toBlob(resolve, 'image/jpeg', 0.92))
+      if (!blob) return
+      await downloadBlob(blob, exportSequenceName('cover', 'jpg'))
+    } catch {
+      // canvas tainted or download blocked — silently skip
+    }
+  }, [])
+
+  const startExport = useCallback(async (): Promise<void> => {    const out = outCanvasRef.current
     if (!out || recordingRef.current) return
     if (ctrlLayout.current.entries.length === 0) return
     setRecordError(null)
@@ -1253,6 +1266,23 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
             onPointerUp={onStagePointerUp}
           />
           <canvas ref={histRef} width={120} height={90} className="hidden" aria-hidden />
+          {/* Platform safe-zone guides (Reels/TikTok/Shorts UI areas). */}
+          {showSafeZones ? (
+            <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-md" aria-hidden>
+              <div className="absolute inset-x-0 top-0 z-10 flex items-start justify-center bg-black/45 pt-1 text-[9px] font-medium text-white/80" style={{ height: '14%' }}>
+                progress bar / profile row
+              </div>
+              <div className="absolute inset-y-0 right-0 z-10 flex w-[12%] items-center justify-center bg-black/45 text-center text-[8px] leading-tight text-white/80">
+                buttons
+              </div>
+              <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-start bg-black/45 pb-1 pl-1.5 text-[9px] font-medium text-white/80" style={{ height: '20%' }}>
+                caption / audio
+              </div>
+              <div className="absolute left-[3%] top-[16%] text-[9px] font-semibold uppercase tracking-wide text-white/70">
+                Safe for text
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1315,6 +1345,22 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
         >
           <Eye size={13} />
           <span className="hidden sm:inline">Compare</span>
+        </Button>
+        <Button
+          size="sm"
+          variant="subtle"
+          aria-label="Toggle platform safe-zone guides"
+          aria-pressed={showSafeZones}
+          title="Show where Reels/TikTok/Shorts UI covers the frame"
+          onClick={() => setShowSafeZones((v) => !v)}
+          className={cn('fs-tool-hit', showSafeZones && 'ring-1 ring-accent')}
+        >
+          <ShieldQuestion size={13} />
+          <span className="hidden sm:inline">Safe zones</span>
+        </Button>
+        <Button size="sm" variant="subtle" aria-label="Save cover frame" title="Save the current frame as a cover image (JPEG)" onClick={() => void saveCoverFrame()}>
+          <Camera size={13} />
+          <span className="hidden sm:inline">Cover</span>
         </Button>
         <Button size="sm" variant="primary" onClick={() => void startExport()} disabled={recording !== null} className="fs-tool-hit">
           <Download size={13} />

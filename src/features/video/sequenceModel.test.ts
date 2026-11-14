@@ -235,13 +235,18 @@ describe('sanitizeSequence', () => {
       aspect: '9:16',
       background: 'blur',
       color: '#abcdef',
+      quality: 720,
     })
+    expect(sanitizeCanvas({ aspect: '9:16', quality: 1080 }).quality).toBe(1080)
+    expect(sanitizeCanvas({ aspect: '9:16', quality: 9999 }).quality).toBe(720)
     expect(sanitizeCanvas({ aspect: 'nope', background: 'nope', color: 'red' })).toEqual(defaultCanvasSettings())
     expect(canvasOutputSize(defaultCanvasSettings())).toBeNull()
     expect(canvasOutputSize({ aspect: '16:9', background: 'color', color: '#000000' })).toEqual({ w: 1280, h: 720 })
     expect(canvasOutputSize({ aspect: '9:16', background: 'color', color: '#000000' })).toEqual({ w: 720, h: 1280 })
     expect(canvasOutputSize({ aspect: '1:1', background: 'color', color: '#000000' })).toEqual({ w: 720, h: 720 })
     expect(canvasOutputSize({ aspect: '4:5', background: 'color', color: '#000000' })).toEqual({ w: 720, h: 900 })
+    expect(canvasOutputSize({ aspect: '16:9', background: 'color', color: '#000000', quality: 1080 })).toEqual({ w: 1920, h: 1080 })
+    expect(canvasOutputSize({ aspect: '9:16', background: 'color', color: '#000000', quality: 1440 })).toEqual({ w: 1080, h: 1920 })
   })
 
   it('drops clips referencing unknown assets and clamps fields', () => {

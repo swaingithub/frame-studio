@@ -238,10 +238,12 @@ export interface CanvasSettings {
   background: CanvasBackground
   /** Fill colour used when background === 'color'. */
   color: string
+  /** Export/preview short edge: 720 | 1080 | 1440 (default 720). */
+  quality?: number
 }
 
 export function defaultCanvasSettings(): CanvasSettings {
-  return { aspect: 'original', background: 'color', color: '#000000' }
+  return { aspect: 'original', background: 'color', color: '#000000', quality: 720 }
 }
 
 const ASPECT_SET = new Set<string>(CANVAS_ASPECTS)
@@ -258,6 +260,7 @@ export function sanitizeCanvas(raw: unknown): CanvasSettings {
   if (typeof rec.aspect === 'string' && ASPECT_SET.has(rec.aspect)) safe.aspect = rec.aspect as CanvasAspect
   safe.background = rec.background === 'blur' ? 'blur' : 'color'
   safe.color = sanitizeHexColor(rec.color, safe.color)
+  safe.quality = rec.quality === 1080 || rec.quality === 1440 ? rec.quality : 720
   return safe
 }
 
@@ -269,15 +272,15 @@ export function sanitizeCanvas(raw: unknown): CanvasSettings {
 export function canvasOutputSize(canvas: CanvasSettings): { w: number; h: number } | null {
   if (canvas.aspect === 'original') return null
   const ratio = CANVAS_RATIOS[canvas.aspect]
-  const short = 720
+  const short = canvas.quality ?? 720
   let w = Math.round(ratio >= 1 ? short * ratio : short)
   let h = Math.round(ratio >= 1 ? short : short / ratio)
-  if (w > 1280) {
-    w = 1280
+  if (w > 1920) {
+    w = 1920
     h = Math.round(w / ratio)
   }
-  if (h > 1280) {
-    h = 1280
+  if (h > 1920) {
+    h = 1920
     w = Math.round(h * ratio)
   }
   const even = (n: number): number => Math.max(2, n - (n % 2))

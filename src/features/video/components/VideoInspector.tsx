@@ -1133,6 +1133,26 @@ function CanvasControls(): ReactNode {
       </div>
 
       {canvas.aspect !== 'original' ? (
+        <div className="mt-1.5 flex items-center gap-1" role="group" aria-label="Export quality">
+          <span className="text-[10px] text-lo">Quality</span>
+          {([720, 1080, 1440] as const).map((q) => (
+            <button
+              key={q}
+              type="button"
+              aria-pressed={(canvas.quality ?? 720) === q}
+              onClick={() => apply({ quality: q }, 'Export quality')}
+              className={cn(
+                'rounded-md px-2 py-1 text-[10px] font-medium tabular-nums transition-colors',
+                (canvas.quality ?? 720) === q ? 'bg-accent text-onaccent' : 'bg-elevated text-hi hover:bg-hover',
+              )}
+            >
+              {q}p
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {canvas.aspect !== 'original' ? (
         <div className="mt-2 flex flex-col gap-2">
           <div className="flex items-center gap-1" role="group" aria-label="Canvas background">
             {(['color', 'blur'] as const).map((mode) => (
