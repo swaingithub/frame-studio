@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Film, Music2, Redo2, SlidersHorizontal, Type as TypeIcon, Undo2, X } from 'lucide-react'
+import { Check, Copy, Gauge, Scissors, Trash2, Volume2, Wand2, Film, Music2, Redo2, SlidersHorizontal, Type as TypeIcon, Undo2, X } from 'lucide-react'
 import { VideoInspectorBody } from '../../video/components/VideoInspector'
 import { useVideoEditor } from '../../video/store'
 import { useAssets } from '../../library/useAssets'
@@ -18,6 +18,53 @@ export function MobileVideoBar(): ReactNode {
   const [sheet, setSheet] = useState<'edit' | 'overlays' | null>(null)
   const histogram = useVideoEditor((s) => s.histogram) as Histogram | null
   const hasClips = useVideoEditor((s) => s.sequence.length > 0)
+  // Contextual mode: selecting a clip swaps the bar for clip tools (CapCut).
+  const activeClipId = useVideoEditor((s) => s.activeClipId)
+  const setActiveClip = useVideoEditor((s) => s.setActiveClip)
+  const splitAtPlayhead = useVideoEditor((s) => s.splitAtPlayhead)
+  const duplicateClip = useVideoEditor((s) => s.duplicateClip)
+  const removeClip = useVideoEditor((s) => s.removeClip)
+
+  if (activeClipId !== null) {
+    return (
+      <>
+        <div
+          className="flex shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-panel px-2 pt-1.5"
+          style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
+          role="toolbar"
+          aria-label="Clip tools"
+        >
+          <BarButton icon={<Scissors size={18} />} label="Split" onPress={splitAtPlayhead} className="min-w-[4.25rem] shrink-0" />
+          <BarButton
+            icon={<Gauge size={18} />}
+            label="Speed"
+            onPress={() => setSheet('edit')}
+            className="min-w-[4.25rem] shrink-0"
+          />
+          <BarButton
+            icon={<Volume2 size={18} />}
+            label="Volume"
+            onPress={() => setSheet('edit')}
+            className="min-w-[4.25rem] shrink-0"
+          />
+          <BarButton
+            icon={<Wand2 size={18} />}
+            label="Animate"
+            onPress={() => setSheet('edit')}
+            className="min-w-[4.25rem] shrink-0"
+          />
+          <BarButton icon={<Copy size={18} />} label="Copy" onPress={() => duplicateClip(activeClipId)} className="min-w-[4.25rem] shrink-0" />
+          <BarButton icon={<Trash2 size={18} />} label="Delete" onPress={() => removeClip(activeClipId)} className="min-w-[4.25rem] shrink-0" />
+          <BarButton icon={<Check size={18} />} label="Done" primary onPress={() => setActiveClip(null)} className="min-w-[4.25rem] shrink-0" />
+        </div>
+        {sheet === 'edit' ? (
+          <ToolSheet title="Edit clip" onClose={() => setSheet(null)}>
+            <VideoInspectorBody histogram={histogram} />
+          </ToolSheet>
+        ) : null}
+      </>
+    )
+  }
 
   return (
     <>
@@ -62,12 +109,14 @@ function BarButton({
   onPress,
   primary,
   disabled,
+  className,
 }: {
   label: string
   icon: ReactNode
   onPress?: () => void
   primary?: boolean
   disabled?: boolean
+  className?: string
 }): ReactNode {
   return (
     <button
@@ -78,6 +127,7 @@ function BarButton({
       className={cn(
         'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition-colors disabled:opacity-40',
         primary ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi active:text-hi',
+        className,
       )}
     >
       {icon}

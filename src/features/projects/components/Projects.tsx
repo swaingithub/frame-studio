@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Check, Copy, FolderOpen, MoreHorizontal, PenLine, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { Check, Copy, Download, FolderOpen, MoreHorizontal, PenLine, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { Button } from '../../../ui/button'
 import { Input } from '../../../ui/input'
@@ -14,6 +14,7 @@ import {
 import { useProjectsStore, useCurrentProject } from '../store'
 import { formatRelativeTime } from '../../../core/format'
 import { ConfirmDialog, type ConfirmRequest } from '../../library/components/ConfirmDialog'
+import { exportProjectBackup, importProjectBackup } from '../../library/backup'
 import type { ProjectDoc, WorkspaceKind } from '../../../core/db/schema'
 import type { ReactNode } from 'react'
 
@@ -147,6 +148,37 @@ export function ManageProjectsDialog({
   const [renaming, setRenaming] = useState<ProjectDoc | null>(null)
   const [renameValue, setRenameValue] = useState('')
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const backup = async (id: string): Promise<void> => {
+    setBusy(id)
+    setImportError(null)
+    try {
+      await exportProjectBackup(id)
+    } catch {
+      setImportError('Backup failed — could not read the project media.')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const importBackup = async (file: File): Promise<void> => {
+    setBusy('import')
+    setImportError(null)
+    try {
+      const json: unknown = JSON.parse(await file.text())
+      const id = await importProjectBackup(json)
+      await useProjectsStore.getState().reload()
+      useProjectsStore.getState().open(id)
+      onOpenChange(false)
+    } catch (err) {
+      setImportError(err instanceof Error && err.message !== 'Unexpected token' ? err.message : 'Import failed — is this a Frame Studio backup file?')
+    } finally {
+      setBusy(null)
+    }
+  }
 
   function handleRenameSubmit(): void {
     if (renaming) {
@@ -164,6 +196,32 @@ export function ManageProjectsDialog({
             description="All data lives locally in your browser and autosaves while you work."
             wide
           >
+            {/* Local backup: one file out, one file in — nothing is uploaded. */}
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-elevated/50 px-3 py-2">
+              <span className="min-w-0 flex-1 text-xs text-lo">
+                Back up a project to a file you keep (Files, Drive, anywhere) — or restore one here. Stays on-device.
+              </span>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  e.target.value = ''
+                  if (file) void importBackup(file)
+                }}
+              />
+              <Button size="sm" variant="subtle" disabled={busy === 'import'} onClick={() => fileInputRef.current?.click()}>
+                <Upload size={13} />
+                {busy === 'import' ? 'Restoring…' : 'Restore backup'}
+              </Button>
+            </div>
+            {importError ? (
+              <p className="mb-3 rounded-md bg-red-500/10 px-3 py-1.5 text-xs text-red-400" role="alert">
+                {importError}
+              </p>
+            ) : null}
             {projects.length === 0 ? (
               <div className="rounded-lg border border-dashed border-line p-8 text-center text-sm text-lo">
                 No projects yet — create one from the project switcher.
@@ -216,6 +274,13 @@ export function ManageProjectsDialog({
                           onSelect={() => void useProjectsStore.getState().duplicate(p.id)}
                         >
                           Duplicate
+                        </MenuItem>
+                        <MenuItem
+                          icon={<Download size={13} />}
+                          disabled={busy === p.id}
+                          onSelect={() => void backup(p.id)}
+                        >
+                          {busy === p.id ? 'Backing up…' : 'Backup file…'}
                         </MenuItem>
                         <MenuSeparator />
                         <MenuItem
