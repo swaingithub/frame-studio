@@ -98,7 +98,10 @@ export const AssetCard = memo(function AssetCard({
       {/* Meta footer */}
       <div className="flex items-center gap-1 px-2 pt-1.5 pb-1">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-hi" title={asset.name}>
+          <p
+            className="fs-label-fade text-xs font-medium text-hi"
+            title={asset.name}
+          >
             {asset.name}
           </p>
           <p className="truncate text-[10px] text-lo">

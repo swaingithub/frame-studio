@@ -51,28 +51,32 @@ export function Header({ compact = false, openPanel = null, onTogglePanel }: Hea
 
       {project ? <ProjectSwitcher onManage={() => setManageOpen(true)} /> : <div className="w-40" />}
 
-      {/* Workspace tabs */}
-      <nav className="mx-auto flex shrink-0 items-center gap-1" aria-label="Workspace switcher">
-        {(['photo', 'video'] as const).map((ws) => (
-          <button
-            key={ws}
-            type="button"
-            disabled={!project}
-            aria-pressed={project?.activeWorkspace === ws}
-            onClick={() => {
-              if (!project) return
-              updateCurrent((doc) => ({ ...doc, activeWorkspace: ws }))
-            }}
-            className={cn(
-              'rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors disabled:opacity-40 sm:px-3',
-              project?.activeWorkspace === ws ? 'bg-accent-soft text-accent' : 'text-lo hover:bg-hover hover:text-hi',
-            )}
-          >
-            {ws}
-            <span className="hidden sm:inline"> editor</span>
-          </button>
-        ))}
-      </nav>
+      {/* Workspace tabs — meaningless without a project, so don't show a
+          disabled ghost of them on the welcome screen. */}
+      {project ? (
+        <nav className="mx-auto flex shrink-0 items-center gap-1" aria-label="Workspace switcher">
+          {(['photo', 'video'] as const).map((ws) => (
+            <button
+              key={ws}
+              type="button"
+              aria-pressed={project?.activeWorkspace === ws}
+              onClick={() => {
+                if (!project) return
+                updateCurrent((doc) => ({ ...doc, activeWorkspace: ws }))
+              }}
+              className={cn(
+                'rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors sm:px-3',
+                project?.activeWorkspace === ws ? 'bg-accent-soft text-accent' : 'text-lo hover:bg-hover hover:text-hi',
+              )}
+            >
+              {ws}
+              <span className="hidden sm:inline"> editor</span>
+            </button>
+          ))}
+        </nav>
+      ) : (
+        <div className="mx-auto" />
+      )}
 
       <div className="flex shrink-0 items-center gap-0.5">
         <Tooltip content={capabilities.webgl2 ? 'WebGL2 available — full pipeline' : 'WebGL2 unavailable — Canvas 2D fallback'}>

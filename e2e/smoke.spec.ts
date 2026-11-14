@@ -3,7 +3,11 @@ import { expect, test } from '@playwright/test'
 test('app boots: editor shell and privacy footer render', async ({ page }) => {
   await page.goto('/')
   await expect(page).toHaveTitle(/Frame Studio/i)
-  // The workspace surfaces the photo/video tabs quickly.
+  // Workspace tabs only appear once a project is open — the welcome screen
+  // must not show a disabled ghost of them.
+  await expect(page.getByRole('button', { name: 'photo editor' })).toHaveCount(0)
+  await expect(page.getByText('Try a sample project')).toBeVisible({ timeout: 10_000 })
+  await page.getByRole('button', { name: /Try a sample project/ }).click()
   await expect(page.getByRole('button', { name: 'photo editor' })).toBeVisible({ timeout: 10_000 })
   await expect(page.getByRole('button', { name: 'video editor' })).toBeVisible()
 })

@@ -197,11 +197,18 @@
    Touch affordances. Hover-only controls are invisible on finger input, so
    coarse pointers reveal them and get larger hit targets (44 px guideline).
 --------------------------------------------------------------------------- */
+/* Asset-card label: fade out at the edge instead of a hard ellipsis cut. */
+.fs-label-fade {
+  overflow: hidden;
+  white-space: nowrap;
+  mask-image: linear-gradient(to right, black calc(100% - 1.25rem), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 1.25rem), transparent 100%);
+}
+
 @media (pointer: coarse) {
   .fs-hover-actions {
     display: flex !important;
-  }
-  .fs-tool-hit {
+  }  .fs-tool-hit {
     min-width: 2.25rem;
     min-height: 2.25rem;
   }

@@ -280,7 +280,7 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
   const straightenActive = usePhotoEditor((s) => s.straightenActive)
 
   return (
-    <div ref={containerRef} className="relative flex h-full min-h-0 w-full items-center justify-center p-2 sm:p-4">
+    <div ref={containerRef} className="relative flex h-full min-h-0 w-full items-center justify-center p-2 pb-[calc(0.5rem+6vh)] sm:p-4 sm:pb-[calc(1rem+6vh)]">
       <div style={{ width: fit.w || undefined, height: fit.h || undefined }} className="relative">
         <canvas
           ref={canvasRef}
