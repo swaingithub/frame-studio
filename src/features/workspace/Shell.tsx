@@ -5,6 +5,7 @@ import { PhotoWorkspace } from './components/PhotoWorkspace'
 import { VideoWorkspace } from './components/VideoWorkspace'
 import { InspectorPanel } from './components/InspectorPanel'
 import { WelcomeScreen } from './components/WelcomeScreen'
+import { FirstRunCoach } from './components/FirstRunCoach'
 import { LibraryPanel } from '../library/components/LibraryPanel'
 import { useProjectsStore, useCurrentProject } from '../projects/store'
 import { useLibraryStore } from '../library/store'
@@ -123,6 +124,8 @@ export function Shell(): ReactNode {
               </div>
             </div>
           ) : null}
+
+          <FirstRunCoach />
         </main>
 
         {/* Right: inspector (inline on desktop, drawer/sheet on compact) */}

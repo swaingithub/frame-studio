@@ -10,12 +10,25 @@ test('mobile audit screenshots', async ({ page }) => {
   await page.waitForTimeout(1200)
   await page.screenshot({ path: `${shots}/01-welcome.png`, fullPage: true })
 
+  // The first-run coach mounts when the project finishes loading, which can
+  // lag the click by seconds — dismiss it wherever it shows up.
+  const dismissCoach = async (): Promise<void> => {
+    const coach = page.getByRole('dialog', { name: /getting started/i })
+    if (await coach.count().catch(() => 0)) {
+      await coach.getByRole('button', { name: /skip|got it/i }).click().catch(() => undefined)
+      await page.waitForTimeout(200)
+    }
+  }
+
   // Try sample project if present
   const sample = page.getByRole('button', { name: /sample project/i })
   if (await sample.count()) {
     await sample.click()
     await page.waitForSelector('main canvas', { timeout: 15000 }).catch(() => undefined)
     await page.waitForTimeout(3000)
+    const coach = page.getByRole('dialog', { name: /getting started/i })
+    if (await coach.count().catch(() => 0)) await page.screenshot({ path: `${shots}/01b-coach.png` })
+    await dismissCoach()
     await page.screenshot({ path: `${shots}/02-after-sample.png`, fullPage: true })
 
     // Header + panel toggles
@@ -36,6 +49,7 @@ test('mobile audit screenshots', async ({ page }) => {
     }
 
     // Mobile bottom bar: Edit sheet + Compare hold
+    await dismissCoach()
     const editBtn = page.getByRole('button', { name: 'Edit', exact: true })
     if (await editBtn.count()) {
       await editBtn.click()
