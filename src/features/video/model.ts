@@ -25,6 +25,10 @@ export interface VideoEditDoc {
   /** Output loudness 0..150 (%) with 100 = unchanged. */
   volume: number
   muted: boolean
+  /** Audio fade-in from the clip's start (seconds, 0–5, 0 = none). */
+  audioFadeIn?: number
+  /** Audio fade-out into the clip's end (seconds, 0–5, 0 = none). */
+  audioFadeOut?: number
   /** Playback speed 0.25–4 (1 = normal). */
   speed: number
   /**
@@ -52,6 +56,8 @@ export function defaultVideoEdit(): VideoEditDoc {
     trimEnd: null,
     volume: 100,
     muted: false,
+    audioFadeIn: 0,
+    audioFadeOut: 0,
     speed: 1,
     speedCurve: 'none',
     chromaKey: null,
@@ -135,6 +141,8 @@ export function sanitizeVideoEdit(raw: unknown, duration = 0): VideoEditDoc {
     trimEnd,
     volume: clampVolume(raw.volume),
     muted: raw.muted === true,
+    audioFadeIn: clampSeconds(raw.audioFadeIn, 5, 0),
+    audioFadeOut: clampSeconds(raw.audioFadeOut, 5, 0),
     speed: clampSpeed(raw.speed),
     speedCurve: clampCurve(raw.speedCurve),
     chromaKey: raw.chromaKey === undefined || raw.chromaKey === null ? null : sanitizeChromaKey(raw.chromaKey),
@@ -155,8 +163,30 @@ export function withVideoAdjustment(doc: VideoEditDoc, key: keyof AdjustValues, 
   }
 }
 
-/** Merges a whole adjustment set (one-click looks) over the doc (pure). */
-export function withVideoAdjustments(doc: VideoEditDoc, values: Partial<AdjustValues>): VideoEditDoc {
+/** Sets the per-clip audio fade lengths (pure). */
+export function withAudioFades(doc: VideoEditDoc, fadeIn: number, fadeOut: number): VideoEditDoc {
+  return {
+    ...doc,
+    audioFadeIn: Math.max(0, Math.min(5, fadeIn)),
+    audioFadeOut: Math.max(0, Math.min(5, fadeOut)),
+  }
+}
+
+/**
+ * Audio gain envelope multiplier (0..1) at a clip-local output time —
+ * `withVolume` supplies the base level, this the ramp. Applied per frame to
+ * the playing element, so preview and (element-volume-faithful) export agree.
+ */
+export function audioGainAt(edit: VideoEditDoc, localOut: number, outDuration: number): number {
+  const fi = Math.min(edit.audioFadeIn ?? 0, outDuration / 2)
+  const fo = Math.min(edit.audioFadeOut ?? 0, outDuration / 2)
+  let gain = 1
+  if (fi > 0 && localOut < fi) gain = Math.min(gain, Math.max(0, localOut / fi))
+  if (fo > 0 && localOut > outDuration - fo) gain = Math.min(gain, Math.max(0, (outDuration - localOut) / fo))
+  return gain
+}
+
+/** Merges a whole adjustment set (one-click looks) over the doc (pure). */export function withVideoAdjustments(doc: VideoEditDoc, values: Partial<AdjustValues>): VideoEditDoc {
   const merged = { ...doc.adjustments, ...values }
   return { ...doc, adjustments: clampAdjustments(merged as Record<string, unknown>) }
 }

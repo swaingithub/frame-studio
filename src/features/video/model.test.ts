@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultVideoEdit, sanitizeVideoEdit, withBgRemove, withChromaKey, withMask, withTrim, withVideoAdjustments, withVolume } from './model'
+import { audioGainAt, defaultVideoEdit, sanitizeVideoEdit, withAudioFades, withBgRemove, withChromaKey, withMask, withTrim, withVideoAdjustments, withVolume } from './model'
 import { defaultAdjustments } from '../../core/adjustments/registry'
 
 describe('video edit model', () => {
@@ -136,5 +136,28 @@ describe('video edit model', () => {
   it('withTrim redelegates to sanitize inside duration', () => {    const doc = withTrim(defaultVideoEdit(), 1, 4, 10)
     expect(doc.trimEnd).toBe(4)
     expect(withTrim(defaultVideoEdit(), 4, 1, 10).trimEnd).toBeNull()
+  })
+
+  it('audio fades sanitize to [0,5] and default to none', () => {
+    expect(defaultVideoEdit().audioFadeIn).toBe(0)
+    expect(defaultVideoEdit().audioFadeOut).toBe(0)
+    expect(sanitizeVideoEdit({ audioFadeIn: 2.5, audioFadeOut: 99 }).audioFadeOut).toBe(5)
+    expect(sanitizeVideoEdit({ audioFadeIn: -3 }).audioFadeIn).toBe(0)
+    expect(withAudioFades(defaultVideoEdit(), 1.2, 3.4).audioFadeOut).toBe(3.4)
+  })
+
+  it('audioGainAt ramps in and out and holds 1 in the middle', () => {
+    const doc = withAudioFades(defaultVideoEdit(), 1, 2)
+    expect(audioGainAt(doc, 0, 10)).toBe(0)
+    expect(audioGainAt(doc, 0.5, 10)).toBeCloseTo(0.5)
+    expect(audioGainAt(doc, 5, 10)).toBe(1)
+    expect(audioGainAt(doc, 9, 10)).toBeCloseTo(0.5)
+    expect(audioGainAt(doc, 10, 10)).toBe(0)
+    expect(audioGainAt(defaultVideoEdit(), 0, 10)).toBe(1)
+    // Fades longer than half the clip cap at the midpoint so they never cross.
+    const long = withAudioFades(defaultVideoEdit(), 5, 5)
+    expect(audioGainAt(long, 2, 4)).toBe(1)
+    expect(audioGainAt(long, 2.5, 4)).toBeCloseTo(0.75)
+    expect(audioGainAt(long, 3, 6)).toBe(1)
   })
 })

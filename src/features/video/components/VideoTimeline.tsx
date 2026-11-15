@@ -45,6 +45,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   const removeClip = useVideoEditor((s) => s.removeClip)
   const setActiveClip = useVideoEditor((s) => s.setActiveClip)
   const reorderClip = useVideoEditor((s) => s.reorderClip)
+  const liveDoc = useVideoEditor((s) => s.doc)
   const setOverlayMuted = useVideoEditor((s) => s.setOverlayMuted)
   const assets = useAssets()
 
@@ -388,6 +389,51 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
 
   const mobileMap = IS_TOUCH && pxPerSec > 0 ? { pxPerSec, viewStart } : null
 
+  // Per-clip audio fade drag (selected clip): grab a fade handle at the
+  // clip's bottom corners and drag horizontally to change the fade length.
+  const fadeDrag = useRef<{ edge: 'in' | 'out'; startX: number; fadeIn: number; fadeOut: number; pxPerSec: number } | null>(null)
+  const onFadeDown = useCallback(
+    (edge: 'in' | 'out', e: React.PointerEvent<HTMLDivElement>): void => {
+      const doc = useVideoEditor.getState().doc
+      if (!doc || !activeClipId) return
+      e.stopPropagation()
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        // synthetic or already-released pointers
+      }
+      const el = trackRef.current
+      const rect = el?.getBoundingClientRect()
+      const pps = rect && mobileMap ? mobileMap.pxPerSec : rect && total > 0 ? rect.width / total : 100
+      fadeDrag.current = { edge, startX: e.clientX, fadeIn: doc.audioFadeIn ?? 0, fadeOut: doc.audioFadeOut ?? 0, pxPerSec: pps }
+    },
+    [activeClipId, mobileMap, total],
+  )
+  const onFadeMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>): void => {
+      const d = fadeDrag.current
+      if (!d || e.buttons === 0) return
+      const delta = (e.clientX - d.startX) / d.pxPerSec
+      const fi = d.edge === 'in' ? Math.max(0, Math.min(5, d.fadeIn + delta)) : d.fadeIn
+      const fo = d.edge === 'out' ? Math.max(0, Math.min(5, d.fadeOut - delta)) : d.fadeOut
+      useVideoEditor.getState().setAudioFades(fi, fo)
+    },
+    [],
+  )
+  const onFadeUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>): void => {
+      if (!fadeDrag.current) return
+      fadeDrag.current = null
+      useVideoEditor.getState().commitAudioFades()
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      } catch {
+        // synthetic or already-released pointers
+      }
+    },
+    [],
+  )
+
   /** Beginner hint: what to do next, based on what's selected. */
   const hint = activeOverlayId !== null
     ? 'Layer selected — drag it, trim its edges, or use the sheet to edit it'
@@ -474,6 +520,14 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
             total={total}
             selected={entry.clip.id === activeClipId}
             mobile={mobileMap}
+            fade={
+              entry.clip.id === activeClipId && liveDoc
+                ? { in: liveDoc.audioFadeIn ?? 0, out: liveDoc.audioFadeOut ?? 0, live: true }
+                : { in: entry.clip.edit.audioFadeIn ?? 0, out: entry.clip.edit.audioFadeOut ?? 0, live: false }
+            }
+            onFadeDown={onFadeDown}
+            onFadeMove={onFadeMove}
+            onFadeUp={onFadeUp}
             onGrab={onSegmentGrab}
             onDrag={onSegmentDrag}
             onRelease={onSegmentRelease}
@@ -582,6 +636,11 @@ interface SegmentProps {
   selected: boolean
   /** Touch px-viewport mapping (null on desktop: fit-to-lane percentages). */
   mobile: { pxPerSec: number; viewStart: number } | null
+  /** Per-clip audio fade lengths in seconds + whether they're live-draggable. */
+  fade: { in: number; out: number; live: boolean }
+  onFadeDown: (edge: 'in' | 'out', e: React.PointerEvent<HTMLDivElement>) => void
+  onFadeMove: (e: React.PointerEvent<HTMLDivElement>) => void
+  onFadeUp: (e: React.PointerEvent<HTMLDivElement>) => void
   /** Drag-reorder hooks (sequence time under the pointer is passed in). */
   onGrab: (entry: SegmentProps['entry'], t: number) => void
   onDrag: (entry: SegmentProps['entry'], t: number) => void
@@ -594,6 +653,10 @@ const TimelineSegment = memo(function TimelineSegment({
   total,
   selected,
   mobile,
+  fade,
+  onFadeDown,
+  onFadeMove,
+  onFadeUp,
   onGrab,
   onDrag,
   onRelease,
@@ -670,6 +733,70 @@ const TimelineSegment = memo(function TimelineSegment({
       ) : null}
       <div className="absolute inset-x-0 top-0 h-5 bg-gradient-to-b from-black/55 to-transparent" aria-hidden />
       <ClipWaveform asset={asset} />
+      {/* Audio fade visualization: gradient along the bottom edge + drag
+          handles on the selected clip (drag horizontally to change length). */}
+      {fade.in > 0 ? (
+        <div
+          className="pointer-events-none absolute bottom-0 left-0 h-4"
+          style={{ width: `${Math.min(100, (fade.in / Math.max(0.01, entry.out)) * 100)}%`, background: 'linear-gradient(to right, transparent 0%, rgba(255,255,255,0.55) 100%)' }}
+          aria-hidden
+        />
+      ) : null}
+      {fade.out > 0 ? (
+        <div
+          className="pointer-events-none absolute bottom-0 right-0 h-4"
+          style={{ width: `${Math.min(100, (fade.out / Math.max(0.01, entry.out)) * 100)}%`, background: 'linear-gradient(to left, transparent 0%, rgba(255,255,255,0.55) 100%)' }}
+          aria-hidden
+        />
+      ) : null}
+      {fade.live ? (
+        <>
+          <div
+            className="fs-fade-handle absolute bottom-0 left-0 z-10 flex h-4 w-4 cursor-ew-resize touch-none items-end justify-start rounded-sm"
+            role="slider"
+            aria-label={`Audio fade in: ${fade.in.toFixed(1)} seconds`}
+            aria-valuemin={0}
+            aria-valuemax={5}
+            aria-valuenow={Math.round(fade.in * 10) / 10}
+            onPointerDown={(e) => onFadeDown('in', e)}
+            onPointerMove={onFadeMove}
+            onPointerUp={onFadeUp}
+            onPointerCancel={onFadeUp}
+          >
+            <span className="mb-0.5 ml-0.5 h-2.5 w-0.5 rounded-full bg-accent" aria-hidden />
+          </div>
+          <div
+            className="fs-fade-handle absolute bottom-0 right-0 z-10 flex h-4 w-4 cursor-ew-resize touch-none items-end justify-end rounded-sm"
+            role="slider"
+            aria-label={`Audio fade out: ${fade.out.toFixed(1)} seconds`}
+            aria-valuemin={0}
+            aria-valuemax={5}
+            aria-valuenow={Math.round(fade.out * 10) / 10}
+            onPointerDown={(e) => onFadeDown('out', e)}
+            onPointerMove={onFadeMove}
+            onPointerUp={onFadeUp}
+            onPointerCancel={onFadeUp}
+          >
+            <span className="mb-0.5 mr-0.5 h-2.5 w-0.5 rounded-full bg-accent" aria-hidden />
+          </div>
+        </>
+      ) : null}
+      {/* Keyframe diamonds (visual): position marks along the clip's top. */}
+      {selected && entry.clip.keyframes ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-2" aria-hidden>
+          {[entry.clip.keyframes.scale, entry.clip.keyframes.x, entry.clip.keyframes.y]
+            .flatMap((track) => (track?.length ? [track] : []))
+            .flatMap((track) => track.map((k) => k.t))
+            .slice(0, 24)
+            .map((t, i) => (
+              <span
+                key={i}
+                className="absolute top-0.5 h-1.5 w-1.5 -translate-x-1/2 rotate-45 bg-amber-300"
+                style={{ left: `${Math.min(100, Math.max(0, (t / Math.max(0.01, entry.out)) * 100))}%` }}
+              />
+            ))}
+        </div>
+      ) : null}
       <div className="absolute inset-x-1 top-0.5 flex items-center gap-1">
         <span className="truncate text-[10px] font-medium text-hi" aria-hidden>
           {asset?.name ?? 'Clip'}

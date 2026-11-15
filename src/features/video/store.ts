@@ -12,6 +12,7 @@ import {
   withVideoAdjustment,
   withVideoAdjustments,
   withVolume,
+  withAudioFades,
   withChromaKey,
   withMask,
   withBgRemove,
@@ -118,6 +119,9 @@ interface VideoState {
   commitTrim: () => void
   setVolume: (v: number) => void
   commitVolume: () => void
+  /** Per-clip audio fade drag (live), committed on release. */
+  setAudioFades: (fadeIn: number, fadeOut: number) => void
+  commitAudioFades: () => void
   setMuted: (v: boolean) => void
   setSpeedLive: (v: number) => void
   commitSpeed: () => void
@@ -507,6 +511,17 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
 
     commitVolume: () => {
       get().commit('Volume')
+    },
+
+    setAudioFades: (fadeIn, fadeOut) => {
+      const base = get().pendingBefore ?? get().doc
+      if (!base || !get().activeClipId) return
+      if (!get().pendingBefore) set({ pendingBefore: get().doc })
+      writeDoc(withAudioFades(base, fadeIn, fadeOut))
+    },
+
+    commitAudioFades: () => {
+      get().commit('Audio fade')
     },
 
     setMuted: (v) => {

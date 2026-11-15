@@ -9,7 +9,7 @@ import { getBlob } from '../../../core/db/blobStore'
 import { useAssets } from '../../library/useAssets'
 import { useCurrentProject } from '../../projects/store'
 import { useVideoEditor, layoutOf } from '../store'
-import { videoDocToEditDoc } from '../model'
+import { audioGainAt, videoDocToEditDoc } from '../model'
 import { ensureSegmenter, segmentSubjectMask } from '../bgRemove'
 import { baseAnimAt, canvasOutputSize, clipOutDuration, clipSrcAt, isOverlapTransition, locateTime, overlaysAt, overlayVisual, type SequenceLayout, type VideoClip, type LocatedTime } from '../sequenceModel'
 import { animAt, outFractionAt, shapeAt } from '../sequenceAnim'
@@ -248,7 +248,15 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
         slotClip.current[slot] = clip.id
       }
       el.playbackRate = clip.edit.speed
-      el.volume = Math.min(1, clip.edit.volume / 100)
+      const baseVolume = Math.min(1, clip.edit.volume / 100)
+      // Audio fade envelope: map the element's source time to clip-local
+      // output time and multiply the base volume (preview + export agree).
+      const outDur = Math.max(
+        0.01,
+        ((clip.edit.trimEnd ?? (Number.isFinite(el.duration) ? el.duration : 0)) - clip.edit.trimStart) / Math.max(0.05, clip.edit.speed),
+      )
+      const localOut = Math.max(0, (src - clip.edit.trimStart) / Math.max(0.05, clip.edit.speed))
+      el.volume = Math.max(0, Math.min(1, baseVolume * audioGainAt(clip.edit, localOut, outDur)))
       el.muted = clip.edit.muted
       if (Number.isFinite(src) && Math.abs(el.currentTime - src) > 0.04) {
         el.currentTime = Math.max(0, src)

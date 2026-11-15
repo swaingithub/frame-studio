@@ -228,6 +228,11 @@
   .fs-trim-handle {
     width: 1.25rem;
   }
+  /* Audio fade handles: thumb-sized grab zones on the clip's bottom corners. */
+  .fs-fade-handle {
+    width: 1.75rem;
+    height: 1.5rem;
+  }
   /* Filmstrip remove button: never hide it behind hover on touch. */
   .fs-thumb-remove {
     display: block !important;
