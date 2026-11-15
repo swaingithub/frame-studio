@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Check, Copy, Download, FolderOpen, MoreHorizontal, PenLine, Plus, Sparkles, Trash2, Upload } from 'lucide-react'
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { Button } from '../../../ui/button'
@@ -14,6 +14,8 @@ import {
 import { useProjectsStore, useCurrentProject } from '../store'
 import { formatRelativeTime } from '../../../core/format'
 import { ConfirmDialog, type ConfirmRequest } from '../../library/components/ConfirmDialog'
+import { deleteAssetCompletely } from '../../library/import'
+import { db } from '../../../core/db/schema'
 import { exportProjectBackup, importProjectBackup } from '../../library/backup'
 import type { ProjectDoc, WorkspaceKind } from '../../../core/db/schema'
 import type { ReactNode } from 'react'
@@ -150,13 +152,52 @@ export function ManageProjectsDialog({
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
+  const [storage, setStorage] = useState<{ usageMB: number | null; unusedCount: number; unusedMB: number } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Storage census: origin usage + media not referenced by any project.
+  const refreshStorage = async (): Promise<void> => {
+    try {
+      const est = await navigator.storage?.estimate?.()
+      const usageMB = est?.usage ? Math.round((est.usage / (1024 * 1024)) * 10) / 10 : null
+      const [assets, projects] = await Promise.all([db.assets.toArray(), db.projects.toArray()])
+      const referenced = new Set<string>()
+      for (const p of projects) for (const id of [...p.photoAssets, ...p.videoAssets]) referenced.add(id)
+      const unused = assets.filter((a) => !referenced.has(a.id))
+      setStorage({
+        usageMB,
+        unusedCount: unused.length,
+        unusedMB: Math.round((unused.reduce((s, a) => s + a.size, 0) / (1024 * 1024)) * 10) / 10,
+      })
+    } catch {
+      setStorage(null)
+    }
+  }
+
+  const clearUnusedMedia = async (): Promise<void> => {
+    setBusy('storage')
+    try {
+      const [assets, projects] = await Promise.all([db.assets.toArray(), db.projects.toArray()])
+      const referenced = new Set<string>()
+      for (const p of projects) for (const id of [...p.photoAssets, ...p.videoAssets]) referenced.add(id)
+      for (const a of assets) if (!referenced.has(a.id)) await deleteAssetCompletely(a.id)
+      await refreshStorage()
+      await useProjectsStore.getState().reload()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** Most recent backup timestamp across projects (localStorage). */
+  const lastBackupAt = Number(window.localStorage.getItem('fs.lastBackupAt') ?? 0)
+  const backupStale = Date.now() - lastBackupAt > 14 * 24 * 60 * 60 * 1000
 
   const backup = async (id: string): Promise<void> => {
     setBusy(id)
     setImportError(null)
     try {
       await exportProjectBackup(id)
+      window.localStorage.setItem('fs.lastBackupAt', String(Date.now()))
     } catch {
       setImportError('Backup failed — could not read the project media.')
     } finally {
@@ -187,6 +228,11 @@ export function ManageProjectsDialog({
     setRenaming(null)
   }
 
+  useEffect(() => {
+    if (open) void refreshStorage()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -200,6 +246,8 @@ export function ManageProjectsDialog({
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-elevated/50 px-3 py-2">
               <span className="min-w-0 flex-1 text-xs text-lo">
                 Back up a project to a file you keep (Files, Drive, anywhere) — or restore one here. Stays on-device.
+                {lastBackupAt > 0 ? ` Last backup: ${formatRelativeTime(lastBackupAt)}.` : ''}
+                {backupStale ? ' Over two weeks — worth a fresh backup.' : ''}
               </span>
               <input
                 ref={fileInputRef}
@@ -217,6 +265,37 @@ export function ManageProjectsDialog({
                 {busy === 'import' ? 'Restoring…' : 'Restore backup'}
               </Button>
             </div>
+            {/* Storage census: origin usage + unused media cleanup. */}
+            {storage && (storage.usageMB !== null || storage.unusedCount > 0) ? (
+              <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-line bg-elevated/50 px-3 py-2">
+                <span className="min-w-0 flex-1 text-xs text-lo">
+                  {storage.usageMB !== null ? `Browser storage used: ${storage.usageMB} MB.` : ''}
+                  {storage.unusedCount > 0
+                    ? ` ${storage.unusedCount} unused media item${storage.unusedCount === 1 ? '' : 's'} (${storage.unusedMB} MB) can be cleared.`
+                    : ' No unused media.'}
+                </span>
+                {storage.unusedCount > 0 ? (
+                  <Button
+                    size="sm"
+                    variant="subtle"
+                    disabled={busy === 'storage'}
+                    onClick={() =>
+                      setConfirm({
+                        title: `Clear ${storage.unusedCount} unused media item${storage.unusedCount === 1 ? '' : 's'}?`,
+                        description:
+                          'These files are not used by any project. Projects and edits are untouched. This cannot be undone.',
+                        confirmLabel: 'Clear media',
+                        danger: true,
+                        onConfirm: () => void clearUnusedMedia(),
+                      })
+                    }
+                  >
+                    <Trash2 size={13} />
+                    {busy === 'storage' ? 'Clearing…' : 'Clear unused'}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             {importError ? (
               <p className="mb-3 rounded-md bg-red-500/10 px-3 py-1.5 text-xs text-red-400" role="alert">
                 {importError}

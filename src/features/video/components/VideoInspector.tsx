@@ -1101,6 +1101,16 @@ function TitleControls({ clipId }: { clipId: string }): ReactNode {
   )
 }
 
+/** Platform export presets: one tap sets aspect + quality together. */
+const EXPORT_PRESETS = [
+  { label: 'Reel / TikTok', aspect: '9:16' as const, quality: 1080, hint: '1080×1920 vertical — Instagram Reels, TikTok, YouTube Shorts' },
+  { label: 'YouTube', aspect: '16:9' as const, quality: 1080, hint: '1920×1080 landscape — YouTube, standard HD' },
+  { label: 'Square', aspect: '1:1' as const, quality: 1080, hint: '1080×1080 — Instagram feed post' },
+  { label: 'Portrait', aspect: '4:5' as const, quality: 1080, hint: '1080×1350 — Instagram portrait post' },
+  { label: 'Cinema', aspect: '2.35:1' as const, quality: 1080, hint: 'Widescreen cinematic letterbox' },
+  { label: 'TV', aspect: '4:3' as const, quality: 720, hint: 'Classic TV aspect' },
+]
+
 /** Project-level output frame: aspect preset + letterbox fill (Basic + Pro). */
 function CanvasControls(): ReactNode {
   const canvas = useVideoEditor((s) => s.canvas)
@@ -1149,6 +1159,30 @@ function CanvasControls(): ReactNode {
               {q}p
             </button>
           ))}
+        </div>
+      ) : null}
+
+      {canvas.aspect !== 'original' ? (
+        <div className="mt-1.5 flex flex-wrap items-center gap-1" role="group" aria-label="Platform export presets">
+          <span className="text-[10px] text-lo">Presets</span>
+          {EXPORT_PRESETS.map((preset) => {
+            const active = canvas.aspect === preset.aspect && (canvas.quality ?? 720) === preset.quality
+            return (
+              <button
+                key={preset.label}
+                type="button"
+                aria-pressed={active}
+                title={preset.hint}
+                onClick={() => apply({ aspect: preset.aspect, quality: preset.quality }, `Preset: ${preset.label}`)}
+                className={cn(
+                  'rounded-md px-2 py-1 text-[10px] font-medium transition-colors',
+                  active ? 'bg-accent text-onaccent' : 'bg-elevated text-hi hover:bg-hover',
+                )}
+              >
+                {preset.label}
+              </button>
+            )
+          })}
         </div>
       ) : null}
 
