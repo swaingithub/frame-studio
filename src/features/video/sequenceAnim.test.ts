@@ -53,7 +53,7 @@ describe('valueAt', () => {
 
 describe('shapeMean', () => {
   it('every ramp shape averages exactly 1 so durations never shift', () => {
-    for (const curve of ['in', 'out', 'inOut', 'outIn'] as const) {
+    for (const curve of ['in', 'out', 'inOut', 'outIn', 'dramatic', 'gentle'] as const) {
       expect(shapeMean(curve)).toBeCloseTo(1, 6)
     }
   })
@@ -72,7 +72,7 @@ describe('shapeAt / srcFractionAt', () => {
   })
 
   it('srcFractionAt is monotonic 0→1 for every curve', () => {
-    for (const curve of ['in', 'out', 'inOut', 'outIn', 'none'] as const) {
+    for (const curve of ['in', 'out', 'inOut', 'outIn', 'dramatic', 'gentle', 'none'] as const) {
       let prev = -1
       for (let i = 0; i <= 20; i++) {
         const f = srcFractionAt(curve, i / 20)
@@ -82,6 +82,12 @@ describe('shapeAt / srcFractionAt', () => {
       expect(srcFractionAt(curve, 0)).toBeCloseTo(0, 6)
       expect(srcFractionAt(curve, 1)).toBeCloseTo(1, 6)
     }
+  })
+
+  it('dramatic and gentle span their endpoints', () => {
+    expect(shapeAt('dramatic', 0)).toBeCloseTo(0.1, 6)
+    expect(shapeAt('dramatic', 1)).toBeCloseTo(1.9, 6)
+    expect(shapeAt('gentle', 0.5)).toBeCloseTo(1, 6)
   })
 
   it('srcFractionAt integrates the shape exactly (closed-form check)', () => {
@@ -94,7 +100,7 @@ describe('shapeAt / srcFractionAt', () => {
 
 describe('outFractionAt', () => {
   it('inverts srcFractionAt exactly across every curve', () => {
-    for (const curve of ['in', 'out', 'inOut', 'outIn', 'none'] as const) {
+    for (const curve of ['in', 'out', 'inOut', 'outIn', 'dramatic', 'gentle', 'none'] as const) {
       for (let i = 0; i <= 10; i++) {
         const u = i / 10
         expect(outFractionAt(curve, srcFractionAt(curve, u))).toBeCloseTo(u, 6)

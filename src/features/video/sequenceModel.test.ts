@@ -122,7 +122,7 @@ describe('transition library', () => {
     for (const type of OVERLAP_TRANSITIONS) expect(isOverlapTransition(type)).toBe(true)
     for (const type of ['cut', 'fadeBlack', 'fadeWhite'] as const) expect(isOverlapTransition(type)).toBe(false)
     // Every motion type added to the library must overlap.
-    for (const type of ['slideLeft', 'slideRight', 'slideUp', 'slideDown', 'wipeLeft', 'wipeRight', 'wipeUp', 'wipeDown', 'circle', 'zoom', 'blur'] as const) {
+    for (const type of ['slideLeft', 'slideRight', 'slideUp', 'slideDown', 'wipeLeft', 'wipeRight', 'wipeUp', 'wipeDown', 'circle', 'zoom', 'blur', 'spin', 'zoomBlur', 'barnDoor', 'flash'] as const) {
       expect(isOverlapTransition(type)).toBe(true)
     }
   })

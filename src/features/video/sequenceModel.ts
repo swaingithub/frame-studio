@@ -34,6 +34,10 @@ export type VideoTransition =
   | 'circle'
   | 'zoom'
   | 'blur'
+  | 'spin'
+  | 'zoomBlur'
+  | 'barnDoor'
+  | 'flash'
   | 'fadeBlack'
   | 'fadeWhite'
 export type TitlePosition = 'lower' | 'center'
@@ -53,6 +57,10 @@ export const TRANSITION_LABELS: Record<VideoTransition, string> = {
   circle: 'Circle',
   zoom: 'Zoom',
   blur: 'Blur',
+  spin: 'Spin',
+  zoomBlur: 'Zoom blur',
+  barnDoor: 'Barn doors',
+  flash: 'Flash',
   fadeBlack: 'Fade to black',
   fadeWhite: 'Fade to white',
 }
@@ -72,6 +80,10 @@ export const TRANSITION_TYPES: readonly VideoTransition[] = [
   'circle',
   'zoom',
   'blur',
+  'spin',
+  'zoomBlur',
+  'barnDoor',
+  'flash',
   'fadeBlack',
   'fadeWhite',
 ]
@@ -94,6 +106,10 @@ export const OVERLAP_TRANSITIONS: readonly VideoTransition[] = [
   'circle',
   'zoom',
   'blur',
+  'spin',
+  'zoomBlur',
+  'barnDoor',
+  'flash',
 ]
 
 const OVERLAP_SET = new Set<VideoTransition>(OVERLAP_TRANSITIONS)

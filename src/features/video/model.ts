@@ -66,7 +66,7 @@ export function defaultVideoEdit(): VideoEditDoc {
   }
 }
 
-export const SPEED_CURVES: SpeedCurve[] = ['none', 'in', 'out', 'inOut', 'outIn']
+export const SPEED_CURVES: SpeedCurve[] = ['none', 'in', 'out', 'inOut', 'outIn', 'dramatic', 'gentle']
 
 export const SPEED_CURVE_LABELS: Record<SpeedCurve, string> = {
   none: 'Constant',
@@ -74,6 +74,8 @@ export const SPEED_CURVE_LABELS: Record<SpeedCurve, string> = {
   out: 'Ramp out',
   inOut: 'Slow-fast-slow',
   outIn: 'Fast-slow-fast',
+  dramatic: 'Dramatic punch',
+  gentle: 'Gentle drift',
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

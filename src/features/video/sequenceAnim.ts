@@ -102,7 +102,7 @@ export function hasKeys(anim: KeyframeSet | undefined): boolean {
 // identical to its average speed; only the pace over time changes.
 // ---------------------------------------------------------------------------
 
-export type SpeedCurve = 'none' | 'in' | 'out' | 'inOut' | 'outIn'
+export type SpeedCurve = 'none' | 'in' | 'out' | 'inOut' | 'outIn' | 'dramatic' | 'gentle'
 
 /** Normalized ramp shapes (piecewise linear, ×avg). `f(0..1)`, mean = 1. */
 const SHAPE_POINTS: Record<Exclude<SpeedCurve, 'none'>, [number, number][]> = {
@@ -127,6 +127,16 @@ const SHAPE_POINTS: Record<Exclude<SpeedCurve, 'none'>, [number, number][]> = {
     [0, 1.65],
     [0.5, 0.35],
     [1, 1.65],
+  ],
+  // deep ramp: near-still start → very fast end (speed-ramp punch)
+  dramatic: [
+    [0, 0.1],
+    [1, 1.9],
+  ],
+  // subtle ramp for a natural pace shift
+  gentle: [
+    [0, 0.7],
+    [1, 1.3],
   ],
 }
 

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Copy, Scissors, Square, Sun, Trash2, Blend, Type, Move, Circle, ZoomIn, Droplets } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Copy, Scissors, Square, Sun, Trash2, Blend, Type, Move, Circle, ZoomIn, Droplets, RotateCw, Zap, Columns2 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { formatDuration } from '../../../core/format'
 import { useVideoEditor, layoutOf } from '../store'
@@ -628,8 +628,11 @@ function TransitionIcon({ type }: { type: VideoTransition }): ReactNode {
   if (type === 'fadeBlack') return <Square size={8} />
   if (type === 'fadeWhite') return <Sun size={8} />
   if (type === 'circle') return <Circle size={8} />
-  if (type === 'zoom') return <ZoomIn size={8} />
+  if (type === 'zoom' || type === 'zoomBlur') return <ZoomIn size={8} />
   if (type === 'blur') return <Droplets size={8} />
+  if (type === 'spin') return <RotateCw size={8} />
+  if (type === 'flash') return <Zap size={8} />
+  if (type === 'barnDoor') return <Columns2 size={8} />
   return <Move size={8} />
 }
 

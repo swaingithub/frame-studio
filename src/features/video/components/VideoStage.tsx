@@ -487,6 +487,8 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
         dx?: number
         dy?: number
         scale?: number
+        /** Rotation in radians around the canvas center. */
+        rot?: number
         alpha?: number
         blur?: number
         clip?: () => void
@@ -497,6 +499,11 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
         if (alpha <= 0.001) return
         const scale = opts.scale ?? 1
         ctx.save()
+        if (opts.rot) {
+          ctx.translate(outW / 2, outH / 2)
+          ctx.rotate(opts.rot)
+          ctx.translate(-outW / 2, -outH / 2)
+        }
         if (opts.clip) {
           ctx.beginPath()
           opts.clip()
@@ -573,6 +580,38 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
             const maxBlur = Math.max(8, Math.min(outW, outH) / 40)
             drawLayer(glMain, mainFit, { blur: p * maxBlur })
             drawLayer(glSecond, secondFit, { alpha: p, blur: (1 - p) * maxBlur })
+            break
+          }
+          case 'spin':
+            // Outgoing whirls out; incoming whirls in from the other way.
+            drawLayer(glMain, mainFit, { rot: p * 0.5, scale: 1 + 0.15 * p, alpha: 1 - p })
+            drawLayer(glSecond, secondFit, { rot: -(1 - p) * 0.5, scale: 1.15 - 0.15 * p, alpha: p })
+            break
+          case 'zoomBlur': {
+            // Zoom and defocus together — the punch-in feel.
+            const maxBlur = Math.max(8, Math.min(outW, outH) / 40)
+            drawLayer(glMain, mainFit, { scale: 1 + 0.25 * p, blur: p * maxBlur, alpha: 1 - p })
+            drawLayer(glSecond, secondFit, { scale: 1.25 - 0.25 * p, blur: (1 - p) * maxBlur, alpha: p })
+            break
+          }
+          case 'barnDoor':
+            // Incoming revealed as two panels closing in from the sides.
+            drawLayer(glMain, mainFit)
+            drawLayer(glSecond, secondFit, {
+              clip: () => {
+                ctx.rect(0, 0, (p * outW) / 2, outH)
+                ctx.rect(outW - (p * outW) / 2, 0, (p * outW) / 2, outH)
+              },
+            })
+            break
+          case 'flash': {
+            // Quick dissolve under a white flash peaking mid-transition.
+            drawLayer(glMain, mainFit)
+            drawLayer(glSecond, secondFit, { alpha: p })
+            ctx.globalAlpha = Math.min(1, Math.sin(p * Math.PI))
+            ctx.fillStyle = '#ffffff'
+            ctx.fillRect(0, 0, outW, outH)
+            ctx.globalAlpha = 1
             break
           }
           default:
