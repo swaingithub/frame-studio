@@ -174,6 +174,8 @@ interface VideoState {
   /** Retrims clip boundaries onto the beat grid (one undo entry). */
   syncCutsToBeats: () => void
   setMusicVolumeLive: (v: number) => void
+  /** Toggles auto-ducking of music under unmuted clip audio. */
+  setMusicDuck: (duck: boolean) => void
   commitMusicVolume: () => void
 
   /** Live canvas settings (aspect/background/colour) + one history entry per gesture. */
@@ -1024,6 +1026,15 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
     commitMusicVolume: () => {
       set({ revision: get().revision + 1 })
       persist(get().sequence, get().music, get().activeClipId)
+    },
+
+    setMusicDuck: (duck) => {
+      const music = get().music
+      if (!music) return
+      const nextMusic = { ...music, duck }
+      recordHistory(duck ? 'Auto-duck on' : 'Auto-duck off', snap(), snap({ music: nextMusic }))
+      set({ music: nextMusic, revision: get().revision + 1 })
+      persist(get().sequence, nextMusic, get().activeClipId)
     },
 
     setCanvasLive: (patch) => {

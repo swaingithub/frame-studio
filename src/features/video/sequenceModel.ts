@@ -138,9 +138,12 @@ export type OverlayAnimPreset =
   | 'slideLeft'
   | 'slideRight'
   | 'typewriter'
+  | 'drop'
+  | 'bounce'
+  | 'swing'
 
 export const OVERLAY_ANIM_PRESETS: OverlayAnimPreset[] = [
-  'none', 'fade', 'pop', 'zoom', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'typewriter',
+  'none', 'fade', 'pop', 'zoom', 'slideUp', 'slideDown', 'slideLeft', 'slideRight', 'typewriter', 'drop', 'bounce', 'swing',
 ]
 
 export const OVERLAY_ANIM_LABELS: Record<OverlayAnimPreset, string> = {
@@ -153,6 +156,9 @@ export const OVERLAY_ANIM_LABELS: Record<OverlayAnimPreset, string> = {
   slideLeft: 'Slide left',
   slideRight: 'Slide right',
   typewriter: 'Typewriter',
+  drop: 'Drop in',
+  bounce: 'Bounce',
+  swing: 'Swing',
 }
 
 /** Intro/outro presets stored on an overlay. Missing fields mean 'none'. */
@@ -200,6 +206,8 @@ export interface MusicTrack {
   beats?: number[]
   /** Detected tempo (0 = unknown). */
   bpm?: number
+  /** Auto-duck under unmuted clip audio (default true; stored only when false). */
+  duck?: boolean
 }
 
 /** Fixed output frame shapes (CapCut-style ratio presets). */
@@ -502,7 +510,13 @@ function sanitizeMusic(raw: unknown, hasAsset: (id: string) => boolean): MusicTr
     beats = cleaned.length > 0 ? cleaned : undefined
   }
   const bpm = typeof rec.bpm === 'number' && Number.isFinite(rec.bpm) && rec.bpm > 0 ? Math.min(300, rec.bpm) : undefined
-  return { assetId, volume, ...(beats ? { beats } : {}), ...(bpm ? { bpm } : {}) }
+  return {
+    assetId,
+    volume,
+    ...(beats ? { beats } : {}),
+    ...(bpm ? { bpm } : {}),
+    ...(rec.duck === false ? { duck: false } : {}),
+  }
 }
 
 /**
@@ -611,6 +625,8 @@ export interface OverlayVisual {
   /** Pixel offsets from the layer's base position. */
   dx: number
   dy: number
+  /** Rotation in radians around the layer's center (0 = none). */
+  rot: number
   /** 0..1 text reveal (typewriter); 1 = fully shown. */
   reveal: number
 }
@@ -626,9 +642,19 @@ function easeOutBack(p: number): number {
   return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2)
 }
 
+/** Standard bounce-out easing (1 at p=1, wobbles below 1 before that). */
+function easeOutBounce(p: number): number {
+  const n1 = 7.5625
+  const d1 = 2.75
+  if (p < 1 / d1) return n1 * p * p
+  if (p < 2 / d1) return n1 * (p -= 1.5 / d1) * p + 0.75
+  if (p < 2.5 / d1) return n1 * (p -= 2.25 / d1) * p + 0.9375
+  return n1 * (p -= 2.625 / d1) * p + 0.984375
+}
+
 /** Preset length in seconds — typewriter gets longer for long lines. */
 function presetSeconds(preset: OverlayAnimPreset, duration: number): number {
-  const base = preset === 'typewriter' ? 1.1 : 0.5
+  const base = preset === 'typewriter' ? 1.1 : preset === 'bounce' ? 0.7 : 0.5
   return Math.max(0.08, Math.min(base, duration * 0.45))
 }
 
@@ -675,6 +701,24 @@ function applyPreset(
     case 'typewriter':
       vis.reveal *= p
       return
+    case 'drop': {
+      // Falls from above and settles with a bounce.
+      vis.alpha *= Math.min(1, p * 3)
+      vis.dy += (entering ? 1 : -1) * (1 - easeOutBounce(p)) * h * 0.35
+      return
+    }
+    case 'bounce': {
+      // Squash-and-stretch scale-in with a landing bounce.
+      vis.alpha *= Math.min(1, p * 2.5)
+      vis.scale *= 0.55 + 0.45 * easeOutBounce(p)
+      return
+    }
+    case 'swing': {
+      // Rocking entrance that decays to level.
+      vis.alpha *= Math.min(1, p * 2.5)
+      vis.rot += (entering ? 1 : -1) * (1 - p) * Math.sin(p * Math.PI * 3) * 0.3
+      return
+    }
   }
 }
 
@@ -683,7 +727,7 @@ function applyPreset(
  * Pure: the preview, export and tests all share this exact math.
  */
 export function overlayVisual(o: OverlayClip, t: number, w: number, h: number): OverlayVisual {
-  const vis: OverlayVisual = { alpha: 1, scale: 1, dx: 0, dy: 0, reveal: 1 }
+  const vis: OverlayVisual = { alpha: 1, scale: 1, dx: 0, dy: 0, rot: 0, reveal: 1 }
   const local = t - o.start
   const duration = Math.max(0.05, o.duration)
 

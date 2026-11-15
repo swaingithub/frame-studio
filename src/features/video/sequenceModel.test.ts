@@ -357,7 +357,7 @@ describe('overlay visual (text animations)', () => {
   })
 
   it('is an identity when no preset is set', () => {
-    expect(overlayVisual(overlay(), 2, 1000, 500)).toEqual({ alpha: 1, scale: 1, dx: 0, dy: 0, reveal: 1 })
+    expect(overlayVisual(overlay(), 2, 1000, 500)).toEqual({ alpha: 1, scale: 1, dx: 0, dy: 0, rot: 0, reveal: 1 })
   })
 
   it('fades in over the first half second and out over the last', () => {
@@ -394,6 +394,29 @@ describe('overlay visual (text animations)', () => {
   it('keeps presets short relative to very brief overlays', () => {
     const o = overlay({ duration: 0.4, animIn: 'fade', animOut: 'fade' })
     expect(overlayVisual(o, 1.2, 1000, 500).alpha).toBeCloseTo(1)
+  })
+
+  it('drop falls in from above and settles level', () => {
+    const o = overlay({ animIn: 'drop', animOut: 'drop' })
+    expect(overlayVisual(o, 1, 1000, 500).dy).toBeGreaterThan(100)
+    expect(overlayVisual(o, 2, 1000, 500).dy).toBeCloseTo(0)
+    // Exits upward (mirrored), and never below settle.
+    expect(overlayVisual(o, 5, 1000, 500).dy).toBeLessThan(-50)
+  })
+
+  it('bounce scales in with a landing wobble and settles at 1', () => {
+    const o = overlay({ animIn: 'bounce' })
+    const early = overlayVisual(o, 1.1, 1000, 500)
+    expect(early.scale).toBeLessThan(0.9)
+    expect(overlayVisual(o, 2.4, 1000, 500).scale).toBeCloseTo(1)
+  })
+
+  it('swing rocks in with rotation and levels out', () => {
+    const o = overlay({ animIn: 'swing', animOut: 'swing' })
+    const early = overlayVisual(o, 1.15, 1000, 500)
+    expect(early.rot).not.toBe(0)
+    expect(Math.abs(early.rot)).toBeLessThan(0.35)
+    expect(overlayVisual(o, 2, 1000, 500).rot).toBeCloseTo(0)
   })
 })
 

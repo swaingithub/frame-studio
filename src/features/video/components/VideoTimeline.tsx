@@ -368,29 +368,14 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
     [commitTrim, endGesture, pxPerSec],
   )
 
-  if (clips.length === 0) {
-    return (
-      <div
-        className="flex h-28 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-line bg-elevated text-center"
-        role="status"
-      >
-        <span className="text-2xl leading-none text-lo" aria-hidden>
-          ＋
-        </span>
-        <span className="text-xs font-medium text-hi">Add video clips to start editing</span>
-        <span className="max-w-56 text-[11px] leading-snug text-lo">
-          Import videos in the library, then tap one and choose “Add to project”. Tap a clip here any time to edit it.
-        </span>
-      </div>
-    )
-  }
-
-  const canOperate = activeClipId !== null
-
-  const mobileMap = IS_TOUCH && pxPerSec > 0 ? { pxPerSec, viewStart } : null
-
   // Per-clip audio fade drag (selected clip): grab a fade handle at the
   // clip's bottom corners and drag horizontally to change the fade length.
+  // Hooks must run unconditionally, so these live above the empty-timeline
+  // early return.
+  const mobileMap = useMemo(
+    () => (IS_TOUCH && pxPerSec > 0 ? { pxPerSec, viewStart } : null),
+    [pxPerSec, viewStart],
+  )
   const fadeDrag = useRef<{ edge: 'in' | 'out'; startX: number; fadeIn: number; fadeOut: number; pxPerSec: number } | null>(null)
   const onFadeDown = useCallback(
     (edge: 'in' | 'out', e: React.PointerEvent<HTMLDivElement>): void => {
@@ -433,6 +418,25 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
     },
     [],
   )
+
+  if (clips.length === 0) {
+    return (
+      <div
+        className="flex h-28 min-w-0 flex-1 flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-line bg-elevated text-center"
+        role="status"
+      >
+        <span className="text-2xl leading-none text-lo" aria-hidden>
+          ＋
+        </span>
+        <span className="text-xs font-medium text-hi">Add video clips to start editing</span>
+        <span className="max-w-56 text-[11px] leading-snug text-lo">
+          Import videos in the library, then tap one and choose “Add to project”. Tap a clip here any time to edit it.
+        </span>
+      </div>
+    )
+  }
+
+  const canOperate = activeClipId !== null
 
   /** Beginner hint: what to do next, based on what's selected. */
   const hint = activeOverlayId !== null

@@ -1253,6 +1253,7 @@ function MusicSection(): ReactNode {
   const setMusic = useVideoEditor((s) => s.setMusic)
   const setMusicVolumeLive = useVideoEditor((s) => s.setMusicVolumeLive)
   const commitMusicVolume = useVideoEditor((s) => s.commitMusicVolume)
+  const setMusicDuck = useVideoEditor((s) => s.setMusicDuck)
   const assets = useAssets()
   const [libraryOpen, setLibraryOpen] = useState(false)
   const audioAssets = (assets ?? []).filter((a) => a.kind === 'audio')
@@ -1320,6 +1321,21 @@ function MusicSection(): ReactNode {
                 commitMusicVolume()
               }}
             />
+          ) : null}
+          {music ? (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-lo" id="music-duck-label">Auto-duck under clip audio</span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={music.duck !== false}
+                aria-labelledby="music-duck-label"
+                onClick={() => setMusicDuck(music.duck === false)}
+                className={`h-5 w-9 shrink-0 rounded-full p-0.5 transition-colors ${music.duck !== false ? 'bg-accent' : 'bg-elevated border border-line'}`}
+              >
+                <span className={`block h-4 w-4 rounded-full bg-white transition-transform ${music.duck !== false ? 'translate-x-4' : ''}`} />
+              </button>
+            </div>
           ) : null}
           {music ? <BeatControls /> : null}
         </div>

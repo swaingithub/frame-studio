@@ -324,6 +324,12 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
       const cy = h * anim.y + vis.dy
       ctx.save()
       ctx.globalAlpha = Math.max(0, Math.min(1, anim.opacity * vis.alpha))
+      if (vis.rot !== 0) {
+        // Rotate the whole layer around its own anchor point.
+        ctx.translate(cx, cy)
+        ctx.rotate(vis.rot)
+        ctx.translate(-cx, -cy)
+      }
       if (o.kind === 'text' && o.text) {
         const fullText = vis.reveal < 1
           ? o.text.slice(0, Math.ceil(o.text.length * vis.reveal))
@@ -917,7 +923,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
         if (musicEl && m) {
           const activeEntry = ctrlLayout.current.entries[locateTime(ctrlLayout.current, globalT.current).index]
           const talking = activeEntry !== undefined && activeEntry.clip.edit.muted === false && activeEntry.clip.edit.volume > 0
-          const target = (m.volume / 100) * (talking ? 0.25 : 1)
+          const target = (m.volume / 100) * (talking && m.duck !== false ? 0.25 : 1)
           if (Math.abs(musicEl.volume - target) > 0.01) musicEl.volume = Math.min(1, target)
           musicEl.loop = true
         }
