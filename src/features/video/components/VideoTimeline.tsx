@@ -636,6 +636,98 @@ function TransitionIcon({ type }: { type: VideoTransition }): ReactNode {
   return <Move size={8} />
 }
 
+/**
+ * Draggable keyframe diamonds along the clip's top edge. Each diamond stands
+ * for a time instant (across all tracks); dragging it retimes every key at
+ * that instant. One history entry per gesture, via the store's phase API.
+ */
+const KeyframeDiamonds = memo(function KeyframeDiamonds({
+  clip,
+  out,
+  mobile,
+}: {
+  clip: VideoClip
+  out: number
+  mobile: { pxPerSec: number } | null
+}): ReactNode {
+  const drag = useRef<{ from: number; last: number; startX: number; started: boolean; pps: number } | null>(null)
+  // One diamond per time instant; keyed by a representative keyframe id so a
+  // dragged diamond does NOT remount mid-gesture (remounting drops the
+  // pointer capture and kills the drag).
+  const groups = useMemo(() => {
+    const map = new Map<number, string>()
+    for (const track of [clip.keyframes?.scale, clip.keyframes?.x, clip.keyframes?.y, clip.keyframes?.opacity]) {
+      for (const k of track ?? []) {
+        const bucket = Math.round(k.t * 20) / 20
+        if (!map.has(bucket)) map.set(bucket, k.id)
+      }
+    }
+    return Array.from(map.entries())
+      .map(([t, id]) => ({ t, id }))
+      .sort((a, b) => a.t - b.t)
+      .slice(0, 24)
+  }, [clip.keyframes])
+
+  const onDown = (t: number, e: React.PointerEvent<HTMLSpanElement>): void => {
+    e.stopPropagation()
+    e.preventDefault()
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // synthetic or already-released pointers
+    }
+    const parent = e.currentTarget.offsetParent as HTMLElement | null
+    const rect = parent?.getBoundingClientRect()
+    const pps = mobile?.pxPerSec ?? (rect && rect.width > 0 ? rect.width / Math.max(0.05, out) : 100)
+    drag.current = { from: t, last: t, startX: e.clientX, started: false, pps }
+  }
+  const onMove = (e: React.PointerEvent<HTMLSpanElement>): void => {
+    const d = drag.current
+    if (!d || e.buttons === 0) return
+    const t = Math.max(0, Math.min(out, d.from + (e.clientX - d.startX) / d.pps))
+    if (Math.abs(t - d.last) < 0.05) return
+    // Move relative to the last landed position — keys move away from `from`
+    // on the first step, so every later step drags from there.
+    const phase = d.started ? 'move' : 'start'
+    d.started = true
+    useVideoEditor.getState().moveClipKeyframe(clip.id, d.last, t, phase)
+    d.last = t
+  }
+  const onUp = (e: React.PointerEvent<HTMLSpanElement>): void => {
+    const d = drag.current
+    if (!d) return
+    drag.current = null
+    useVideoEditor.getState().moveClipKeyframe(clip.id, d.last, d.last, 'end')
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    } catch {
+      // synthetic or already-released pointers
+    }
+  }
+
+  return (
+    <div className="absolute inset-x-0 top-0 z-[7] h-3" aria-hidden={false}>
+      {groups.map(({ t, id }) => (
+        <span
+          key={id}
+          role="slider"
+          aria-label={`Keyframe at ${t.toFixed(1)} seconds — drag to retime`}
+          aria-valuemin={0}
+          aria-valuemax={Math.round(out * 10) / 10}
+          aria-valuenow={Math.round(t * 10) / 10}
+          tabIndex={0}
+          className="absolute top-0.5 h-2.5 w-2.5 -translate-x-1/2 rotate-45 cursor-ew-resize touch-none rounded-[2px] bg-amber-300 transition-transform hover:scale-125"
+          style={{ left: `${Math.min(100, Math.max(0, (t / Math.max(0.01, out)) * 100))}%` }}
+          onPointerDown={(e) => onDown(t, e)}
+          onPointerMove={onMove}
+          onPointerUp={onUp}
+          onPointerCancel={onUp}
+        />
+      ))}
+    </div>
+  )
+})
+
 interface SegmentProps {
   entry: { clip: VideoClip; globalStart: number; out: number; overlapAfter: number }
   index: number
@@ -788,21 +880,11 @@ const TimelineSegment = memo(function TimelineSegment({
           </div>
         </>
       ) : null}
-      {/* Keyframe diamonds (visual): position marks along the clip's top. */}
+      {/* Keyframe diamonds: position marks along the clip's top. On the
+          selected clip they're draggable — move a diamond to retime every
+          key at that instant (one history entry per gesture). */}
       {selected && entry.clip.keyframes ? (
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[6] h-2" aria-hidden>
-          {[entry.clip.keyframes.scale, entry.clip.keyframes.x, entry.clip.keyframes.y]
-            .flatMap((track) => (track?.length ? [track] : []))
-            .flatMap((track) => track.map((k) => k.t))
-            .slice(0, 24)
-            .map((t, i) => (
-              <span
-                key={i}
-                className="absolute top-0.5 h-1.5 w-1.5 -translate-x-1/2 rotate-45 bg-amber-300"
-                style={{ left: `${Math.min(100, Math.max(0, (t / Math.max(0.01, entry.out)) * 100))}%` }}
-              />
-            ))}
-        </div>
+        <KeyframeDiamonds clip={entry.clip} out={entry.out} mobile={mobile} />
       ) : null}
       <div className="absolute inset-x-1 top-0.5 flex items-center gap-1">
         <span className="truncate text-[10px] font-medium text-hi" aria-hidden>

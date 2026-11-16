@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   animAt,
+  moveKeyframeTime,
   ANIM_DEFAULTS,
   ANIM_RANGES,
   outFractionAt,
@@ -125,5 +126,36 @@ describe('animAt', () => {
   it('ranges cover the sanitizing bounds', () => {
     expect(ANIM_RANGES.scale.min).toBe(0.1)
     expect(ANIM_RANGES.opacity.max).toBe(1)
+  })
+})
+
+describe('moveKeyframeTime', () => {
+  it('moves every key at the instant across all tracks', () => {
+    const keys = { scale: [key(1, 2)], x: [key(0.98, 0.5), key(2, 0)], y: [], opacity: [] }
+    const next = moveKeyframeTime(keys, 1, 1.5, 10)
+    expect(next.scale[0].t).toBe(1.5)
+    expect(next.x.find((k) => k.id === 'kf_0.98')?.t).toBe(1.5)
+    expect(next.x.find((k) => k.id === 'kf_2')?.t).toBe(2)
+    expect(next.scale[0].v).toBe(2)
+  })
+
+  it('clamps the target into [0, maxT] and keeps tracks sorted', () => {
+    const keys = { scale: [key(2, 3)], x: [], y: [], opacity: [] }
+    const next = moveKeyframeTime(keys, 2, 99, 4)
+    expect(next.scale[0].t).toBe(4)
+  })
+
+  it('never crosses a neighbouring key — the drag clamps before it', () => {
+    const keys = { scale: [key(1, 1), key(3, 9)], x: [], y: [], opacity: [] }
+    const next = moveKeyframeTime(keys, 3, 1, 10)
+    // Stops just short of the key at 1 instead of swallowing it.
+    expect(next.scale).toHaveLength(2)
+    expect(next.scale.find((k) => k.v === 9)?.t).toBeCloseTo(1.06, 6)
+    expect(next.scale.find((k) => k.v === 1)?.t).toBe(1)
+  })
+
+  it('returns the same set when nothing sits at `from`', () => {
+    const keys = { scale: [key(1, 1)], x: [], y: [], opacity: [] }
+    expect(moveKeyframeTime(keys, 5, 2, 10)).toBe(keys)
   })
 })

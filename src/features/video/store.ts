@@ -23,6 +23,7 @@ import {
   MAX_TRANSITION,
   clampAnimValue,
   defaultCanvasSettings,
+  clipOutDuration,
   locateTime,
   migrateLegacySequence,
   MIN_OVERLAY_OUT,
@@ -41,7 +42,7 @@ import {
 import { layoutSequence } from './sequenceModel'
 import { syncCutsToBeats } from './sequenceModel'
 import { PRESETS, mixValues, filmicCurve } from '../../core/adjustments/presets'
-import { animAt, ANIM_DEFAULTS, type AnimBase, type Keyframe, type KeyframeSet, type SpeedCurve } from './sequenceAnim'
+import { animAt, moveKeyframeTime, ANIM_DEFAULTS, type AnimBase, type Keyframe, type KeyframeSet, type SpeedCurve } from './sequenceAnim'
 import { STICKER_DEFAULT_SCALE } from './stickers'
 import { CAPTION_BASE, type CaptionSegment } from './captions'
 import type { ChromaKey, Mask } from '../../core/adjustments/edits'
@@ -160,6 +161,8 @@ interface VideoState {
   setClipAnim: (values: Partial<AnimBase>) => void
   commitClipAnim: () => void
   toggleClipKeyframe: (prop: keyof AnimBase) => void
+  /** Drags a keyframe diamond: phase start/move during the drag, end commits one history entry. */
+  moveClipKeyframe: (clipId: string, from: number, to: number, phase: 'start' | 'move' | 'end') => void
 
   splitAtPlayhead: () => void
   moveClip: (clipId: string, dir: -1 | 1) => void
@@ -219,6 +222,9 @@ function upsertKeyframe(track: Keyframe[], t: number, v: number): Keyframe[] {
 }
 
 export const useVideoEditor = create<VideoState>()((set, get) => {
+  /** Snapshot taken when a keyframe-drag gesture starts (one history entry). */
+  let kfGestureBefore: ReturnType<typeof snap> | null = null
+
   /**
    * Writes the live sequence + selection back into the project doc. The
    * selection doubles as the legacy `activeVideoId` (asset id) so other
@@ -909,6 +915,31 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       recordHistory(has ? 'Remove keyframe' : 'Add keyframe', before, snap({ clips: sequenceNext }))
       set({ sequence: sequenceNext, clip: clipNext, pendingAnimBefore: null, revision: get().revision + 1 })
       persist(sequenceNext, get().music, id)
+    },
+
+    /**
+     * Drags a timeline keyframe diamond: moves every track's key at local
+     * time `from` to `to`. `phase` starts/ends the gesture so the whole drag
+     * lands as one history entry.
+     */
+    moveClipKeyframe: (clipId, from, to, phase) => {
+      const clip = get().sequence.find((c) => c.id === clipId)
+      if (!clip?.keyframes) return
+      if (phase === 'start') kfGestureBefore = snap()
+      if (phase === 'end') {
+        const beforeSnap = kfGestureBefore
+        kfGestureBefore = null
+        if (beforeSnap && JSON.stringify(beforeSnap) !== JSON.stringify(snap())) {
+          recordHistory('Move keyframe', beforeSnap, snap())
+        }
+      }
+      const maxT = Math.max(0.1, clipOutDuration(clip, get().durations[clip.assetId] ?? 0))
+      const nextKeys = moveKeyframeTime(clip.keyframes, from, to, maxT)
+      if (nextKeys === clip.keyframes) return
+      const sequenceNext = get().sequence.map((c) => (c.id === clipId ? { ...c, keyframes: nextKeys } : c))
+      const clipNext = sequenceNext.find((c) => c.id === clipId) ?? null
+      set({ sequence: sequenceNext, clip: clipNext, pendingAnimBefore: null, revision: get().revision + 1 })
+      persist(sequenceNext, get().music, clipId)
     },
 
     splitAtPlayhead: () => {

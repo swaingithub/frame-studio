@@ -1,7 +1,8 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { Music2, Plus, Star, Heart, MoreVertical, Trash2, Tag, Image as ImageIcon, Clapperboard } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { useThumbnail } from '../useAssets'
+import { getBlob } from '../../../core/db/blobStore'
 import { Dropdown, DropdownTrigger, DropdownContent, MenuItem, MenuSeparator } from '../../../ui/dropdown'
 import { formatBytes, formatDuration } from '../../../core/format'
 import type { AssetKind, MediaAsset } from '../../../core/db/schema'
@@ -11,6 +12,108 @@ const kindIcon: Record<AssetKind, ReactNode> = {
   image: <ImageIcon size={20} className="text-lo" />,
   video: <Clapperboard size={20} className="text-lo" />,
   audio: <Music2 size={20} className="text-lo" />,
+}
+
+/** Hover-scrubbing is a pointer interaction — skip it on touch-only devices. */
+const CAN_HOVER = typeof matchMedia !== 'undefined' && matchMedia('(hover: hover) and (pointer: fine)').matches
+
+/**
+ * Hover scrub for video cards: as the pointer sweeps the thumbnail, decodes
+ * frames from the local blob (hidden video element → small canvas → JPEG
+ * frame). Lazily loads the blob on first hover; everything stays on-device.
+ */
+function VideoScrubFrame({ asset, fallback }: { asset: MediaAsset; fallback: string | null }): ReactNode {
+  const [frame, setFrame] = useState<string | null>(null)
+  const [active, setActive] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const pendingT = useRef<number | null>(null)
+
+  useEffect(() => {
+    if (!active) return
+    let cancelled = false
+    let url: string | null = null
+    const canvas = document.createElement('canvas')
+    canvas.width = 192
+    const draw = (): void => {
+      const v = videoRef.current
+      if (!v || v.videoWidth === 0 || cancelled) return
+      canvas.height = Math.max(1, Math.round((canvas.width * v.videoHeight) / v.videoWidth))
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.drawImage(v, 0, 0, canvas.width, canvas.height)
+      setFrame(canvas.toDataURL('image/jpeg', 0.6))
+    }
+    const onSeeked = (): void => {
+      draw()
+      const v = videoRef.current
+      if (v && pendingT.current !== null) {
+        v.currentTime = pendingT.current
+        pendingT.current = null
+      }
+    }
+    void (async () => {
+      const blob = await getBlob({ key: asset.storageKey, storage: asset.storage })
+      if (!blob || cancelled) return
+      url = URL.createObjectURL(blob)
+      const v = document.createElement('video')
+      v.muted = true
+      v.preload = 'auto'
+      v.src = url
+      v.addEventListener('seeked', onSeeked)
+      videoRef.current = v
+      await new Promise<void>((resolve) => {
+        v.onloadeddata = () => resolve()
+        v.onerror = () => resolve()
+      })
+      if (cancelled || v.videoWidth === 0) return
+      draw()
+    })()
+    return () => {
+      cancelled = true
+      if (url) URL.revokeObjectURL(url)
+      videoRef.current = null
+      setFrame(null)
+      pendingT.current = null
+    }
+  }, [active, asset.storageKey, asset.storage])
+
+  if (asset.kind !== 'video' || !CAN_HOVER) return <ThumbnailFrame asset={asset} thumb={fallback} />
+
+  const seek = (e: React.PointerEvent<HTMLDivElement>): void => {
+    const v = videoRef.current
+    const rect = e.currentTarget.getBoundingClientRect()
+    if (!rect.width || !v || !Number.isFinite(v.duration) || v.duration <= 0) return
+    const frac = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const t = frac * v.duration
+    if (v.readyState < 1 || v.seeking) {
+      pendingT.current = t
+      return
+    }
+    v.currentTime = t
+  }
+
+  return (
+    <div
+      className="relative h-full w-full"
+      onPointerEnter={() => setActive(true)}
+      onPointerLeave={() => setActive(false)}
+      onPointerMove={seek}
+    >
+      <ThumbnailFrame asset={asset} thumb={frame ?? fallback} />
+      {frame ? (
+        <span className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-accent/80 to-accent/20" aria-hidden />
+      ) : null}
+    </div>
+  )
+}
+
+/** The plain still thumbnail (also the fallback layer under the scrub). */
+function ThumbnailFrame({ asset, thumb }: { asset: MediaAsset; thumb: string | null }): ReactNode {
+  return thumb ? (
+    <img src={thumb} alt={asset.name} loading="lazy" className="h-full w-full object-cover" draggable={false} />
+  ) : (
+    <span aria-hidden>{kindIcon[asset.kind]}</span>
+  )
 }
 
 interface AssetCardProps {
@@ -63,13 +166,10 @@ export const AssetCard = memo(function AssetCard({
         selected ? 'border-accent shadow-[0_0_0_1px_var(--c-accent)]' : 'border-line hover:border-lo/40',
       )}
     >
-      {/* Thumbnail region (fixed aspect keeps the grid calm while loading) */}
+      {/* Thumbnail region (fixed aspect keeps the grid calm while loading).
+          Video cards hover-scrub through their frames on pointer devices. */}
       <div className="relative flex aspect-[4/3] items-center justify-center bg-[var(--c-stage)]">
-        {thumb ? (
-          <img src={thumb} alt={asset.name} loading="lazy" className="h-full w-full object-cover" draggable={false} />
-        ) : (
-          <span aria-hidden>{kindIcon[asset.kind]}</span>
-        )}
+        <VideoScrubFrame asset={asset} fallback={thumb} />
 
         <span className="absolute left-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-medium text-white">
           {kindLabel}

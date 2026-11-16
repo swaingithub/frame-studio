@@ -96,6 +96,66 @@ export function hasKeys(anim: KeyframeSet | undefined): boolean {
   )
 }
 
+/**
+ * Moves every key that sits at local time `from` (all tracks — a timeline
+ * diamond represents a time, not a single property) toward `to`, clamped to
+ * [0, maxT] AND between the neighbouring keys so a drag can never cross
+ * (and thereby swallow) another key. Pure; same object back when nothing moved.
+ */
+export function moveKeyframeTime(keys: KeyframeSet, from: number, to: number, maxT: number): KeyframeSet {
+  const eps = 0.05
+  const gap = 0.06
+  if (!keys.scale.some((k) => Math.abs(k.t - from) <= eps) &&
+      !keys.x.some((k) => Math.abs(k.t - from) <= eps) &&
+      !keys.y.some((k) => Math.abs(k.t - from) <= eps) &&
+      !keys.opacity.some((k) => Math.abs(k.t - from) <= eps)) return keys
+  let lo = 0
+  let hi = maxT
+  for (const track of [keys.scale, keys.x, keys.y, keys.opacity]) {
+    const others = track.filter((k) => Math.abs(k.t - from) > eps)
+    const prev = others.filter((k) => k.t < from).pop()
+    const next = others.find((k) => k.t > from)
+    if (prev) lo = Math.max(lo, prev.t + gap)
+    if (next) hi = Math.min(hi, next.t - gap)
+  }
+  const target = Math.max(lo, Math.min(hi, to))
+  const movedIds = new Set<string>()
+  const shift = (track: Keyframe[]): Keyframe[] => {
+    if (!track.some((k) => Math.abs(k.t - from) <= eps)) return track
+    return track.map((k) => {
+      if (Math.abs(k.t - from) > eps) return k
+      movedIds.add(k.id)
+      return { ...k, t: target }
+    })
+  }
+  const next: KeyframeSet = {
+    scale: shift(keys.scale),
+    x: shift(keys.x),
+    y: shift(keys.y),
+    opacity: shift(keys.opacity),
+  }
+  if (movedIds.size === 0) return keys
+  // Keep tracks sorted; collapse any residual same-instant duplicates (the
+  // moved one wins).
+  const settle = (track: Keyframe[]): Keyframe[] => {
+    const sorted = [...track].sort((a, b) => a.t - b.t)
+    const out: Keyframe[] = []
+    for (const k of sorted) {
+      const prev = out[out.length - 1]
+      if (prev && k.t - prev.t <= 0.015) {
+        const kMoved = movedIds.has(k.id)
+        const prevMoved = movedIds.has(prev.id)
+        if (kMoved === prevMoved || prevMoved) continue
+        out[out.length - 1] = k
+        continue
+      }
+      out.push(k)
+    }
+    return out
+  }
+  return { scale: settle(next.scale), x: settle(next.x), y: settle(next.y), opacity: settle(next.opacity) }
+}
+
 // ---------------------------------------------------------------------------
 // Speed ramping — an eased speed curve INSIDE one clip. Shapes are normalized
 // to mean 1.0 so the clip's output duration (and the whole layout!) stays
