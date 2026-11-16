@@ -4,6 +4,7 @@ import { Dialog, DialogContent } from '../../../ui/dialog'
 import { cn } from '../../../lib/cn'
 import { toast } from '../../../ui/toastStore'
 import { importFiles, importFolder } from '../../library/import'
+import { generateTrack, MOODS } from '../../library/musicGenerator'
 import { useAssets } from '../../library/useAssets'
 import { useProjectsStore } from '../../projects/store'
 import { useVideoEditor } from '../store'
@@ -225,6 +226,7 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
   )
 
   const [folderBusy, setFolderBusy] = useState(false)
+  const [generating, setGenerating] = useState(false)
   const [tab, setTab] = useState<'foryou' | 'browse' | 'saved' | 'yours'>(
     audioAssets.length > 0 ? 'yours' : 'foryou',
   )
@@ -346,6 +348,29 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
     setMusic(assetId)
     toast('Music added', undefined, 'success')
     onClose()
+  }
+
+  const generateMusic = async (mood: keyof typeof MOODS): Promise<void> => {
+    if (generating) return
+    setGenerating(true)
+    setError(null)
+    try {
+      const result = await generateTrack(mood, Date.now())
+      const file = new File([result.blob], `${result.title}.wav`, { type: 'audio/wav' })
+      const imported = await importFiles([file])
+      if (imported.imported.length === 0) {
+        throw new Error(imported.failed[0]?.reason ?? 'Could not import generated track.')
+      }
+      const assetId = imported.imported[0].id
+      addAssetsToCurrent([assetId], 'audio')
+      setMusic(assetId)
+      toast('Generated original track', result.title, 'success')
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed.')
+    } finally {
+      setGenerating(false)
+    }
   }
 
   const categories = [...new Set(MUSIC_LIBRARY.tracks.map((t) => t.mood[0]))]
@@ -500,7 +525,41 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
                         />
                       ))}
                   </div>
-              </div>
+                </div>
+
+                {/* Generate original music */}
+                <div className="px-2 mb-3">
+                  <h3 className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-lo">
+                    Generate original music
+                  </h3>
+                  <p className="mb-2 text-[10px] text-lo/70">
+                    Create a brand-new CC0 track in your browser — no downloads, nothing uploaded.
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {(['chill', 'upbeat', 'ambient', 'cinematic', 'gentle', 'hiphop', 'corporate', 'horror', 'retrowave'] as const).map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => void generateMusic(m)}
+                        disabled={generating}
+                        className={cn(
+                          'rounded-full px-2 py-1 text-[10px] font-semibold transition-colors',
+                          generating
+                            ? 'bg-elevated text-lo/40 cursor-not-allowed'
+                            : 'bg-elevated text-hi hover:bg-hover hover:text-hi',
+                        )}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                  {generating && (
+                    <div className="flex items-center gap-2 text-[10px] text-accent">
+                      <Loader2 size={11} className="animate-spin" />
+                      Synthesizing track…
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
