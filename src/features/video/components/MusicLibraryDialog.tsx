@@ -3,7 +3,7 @@ import { Clock3, Disc2, Heart, Loader2, Music, Play, Plus, ShieldCheck, Search, 
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { cn } from '../../../lib/cn'
 import { toast } from '../../../ui/toastStore'
-import { importFiles } from '../../library/import'
+import { importFiles, importFolder } from '../../library/import'
 import { useAssets } from '../../library/useAssets'
 import { useProjectsStore } from '../../projects/store'
 import { useVideoEditor } from '../store'
@@ -164,10 +164,20 @@ function YourMusicRow({
   onUse,
   inUse,
 }: {
-  asset: { id: string; name: string; size: number; duration: number | null }
+  asset: {
+    id: string
+    name: string
+    size: number
+    duration: number | null
+    artist?: string | null
+    album?: string | null
+  }
   onUse: () => void
   inUse: boolean
 }): ReactNode {
+  const byline = asset.artist
+    ? `${asset.artist}${asset.album ? ` · ${asset.album}` : ''}`
+    : 'imported'
   return (
     <div className="flex items-center gap-3 rounded-xl border border-line bg-elevated/50 p-2.5 transition-colors hover:border-lo/60">
       <div className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-accent/10 text-accent">
@@ -178,7 +188,7 @@ function YourMusicRow({
         <span className="truncate block text-sm font-semibold text-hi">{asset.name}</span>
         <p className="mt-0.5 text-[10px] text-lo">
           {asset.duration !== null ? `${formatMusicDuration(asset.duration)} · ` : ''}
-          {(asset.size / 1024).toFixed(0)} KB · imported
+          {byline} · {(asset.size / 1024).toFixed(0)} KB
         </p>
       </div>
 
@@ -214,7 +224,10 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
     [assets],
   )
 
-  const [tab, setTab] = useState<'foryou' | 'browse' | 'saved' | 'yours'>('foryou')
+  const [folderBusy, setFolderBusy] = useState(false)
+  const [tab, setTab] = useState<'foryou' | 'browse' | 'saved' | 'yours'>(
+    audioAssets.length > 0 ? 'yours' : 'foryou',
+  )
   const [search, setSearch] = useState('')
   const [moodFilter, setMoodFilter] = useState<string | null>(null)
   const [savedIds, setSavedIds] = useState<Set<string>>(loadSaved)
@@ -298,6 +311,33 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
       setError(err instanceof Error ? err.message : 'The track could not be added.')
     } finally {
       setBusyId(null)
+    }
+  }
+
+  const importMusicFolder = async (): Promise<void> => {
+    if (folderBusy) return
+    setFolderBusy(true)
+    setError(null)
+    try {
+      const result = await importFolder((p) => {
+        // progress handled by the library store UI elsewhere; keep light here
+        void p
+      })
+      if (result.imported.length > 0) {
+        toast(`Imported ${result.imported.length} tracks from your music folder`, undefined, 'success')
+        setTab('yours')
+      }
+      if (result.failed.length > 0) {
+        setError(
+          `Skipped ${result.failed.length} file${result.failed.length === 1 ? '' : 's'}: ` +
+            result.failed.slice(0, 3).map((f) => `${f.name}: ${f.reason}`).join(' · ') +
+            (result.failed.length > 3 ? ` …and ${result.failed.length - 3} more` : ''),
+        )
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Folder import failed.')
+    } finally {
+      setFolderBusy(false)
     }
   }
 
@@ -530,24 +570,59 @@ export function MusicLibraryDialog({ open, onClose }: MusicLibraryDialogProps): 
               {tab === 'yours' && (
                 <div className="px-2">
                   {audioAssets.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="flex flex-col items-center justify-center py-10 text-center gap-2">
                       <Disc2 size={32} className="mx-auto mb-2 text-lo/30" />
                       <h3 className="text-sm font-semibold text-hi">No imported audio yet</h3>
                       <p className="mt-0.5 text-[11px] text-lo/60">
-                        Drop audio files into Frame Studio or import them in the Library.
+                        Import your music folder to build your personal library — any language, any format.
                       </p>
+                      <button
+                        type="button"
+                        onClick={importMusicFolder}
+                        disabled={folderBusy}
+                        className="mt-2 inline-flex items-center gap-1.5 rounded-md bg-accent px-3 py-1.5 text-[11px] font-semibold text-onaccent transition-colors hover:bg-accent/90 disabled:opacity-60"
+                      >
+                        {folderBusy ? (
+                          <Loader2 size={11} className="animate-spin" />
+                        ) : (
+                          <Plus size={11} />
+                        )}
+                        Import music folder
+                      </button>
                     </div>
                   ) : (
-                    <div className="grid gap-2">
-                      {audioAssets.map((a) => (
-                        <YourMusicRow
-                          key={a.id}
-                          asset={{ id: a.id, name: a.name, size: a.size, duration: a.duration }}
-                          onUse={() => selectImported(a.id)}
-                          inUse={music?.assetId === a.id}
-                        />
-                      ))}
-                    </div>
+                    <>
+                      <div className="flex items-center gap-2 mb-2">
+                        <button
+                          type="button"
+                          onClick={importMusicFolder}
+                          disabled={folderBusy}
+                          className="shrink-0 rounded-md border border-line bg-elevated px-2 py-1 text-[10px] font-semibold text-lo transition-colors hover:bg-hover disabled:opacity-60"
+                        >
+                          {folderBusy ? <Loader2 size={10} className="animate-spin" /> : 'Import more'}
+                        </button>
+                        <span className="text-[10px] text-lo/50">
+                          {audioAssets.length} track{audioAssets.length === 1 ? '' : 's'} in your library
+                        </span>
+                      </div>
+                      <div className="grid gap-2">
+                        {audioAssets.map((a) => (
+                          <YourMusicRow
+                            key={a.id}
+                            asset={{
+                              id: a.id,
+                              name: a.name,
+                              size: a.size,
+                              duration: a.duration,
+                              artist: typeof a.exif?.artist === 'string' ? a.exif.artist : undefined,
+                              album: typeof a.exif?.album === 'string' ? a.exif.album : undefined,
+                            }}
+                            onUse={() => selectImported(a.id)}
+                            inUse={music?.assetId === a.id}
+                          />
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
               )}

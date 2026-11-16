@@ -2,6 +2,7 @@ import { db } from '../../core/db/schema'
 import { putBlob, deleteBlob } from '../../core/db/blobStore'
 import { newId } from '../../core/id'
 import { probeVideo, probeAudio } from './probe'
+import { readAudioMetadata } from './metadata'
 import { makeThumbnail } from '../../lib/thumbnailClient'
 import type { AssetKind, MediaAsset } from '../../core/db/schema'
 
@@ -94,6 +95,8 @@ async function importOne(file: File, kind: AssetKind): Promise<MediaAsset> {
   } else {
     const meta = await probeAudio(file)
     base.duration = meta.duration
+    const tags = await readAudioMetadata(file)
+    if (Object.keys(tags).length > 0) base.exif = tags as Record<string, string | number>
   }
 
   const stored = await putBlob(file)
@@ -170,3 +173,52 @@ export async function deleteAssetCompletely(id: string): Promise<void> {
     await deleteBlob({ key: asset.storageKey, storage: 'opfs' })
   }
 }
+
+/** Audio extensions recognized for a music-library scan. */
+const MUSIC_EXT = new Set(['mp3', 'wav', 'm4a', 'aac', 'ogg', 'oga', 'opus', 'flac'])
+
+function isMusic(file: File): boolean {
+  return MUSIC_EXT.has(extensionOf(file.name)) || file.type.startsWith('audio/')
+}
+
+/**
+ * Recursively collect every audio file under a directory handle.
+ * Requires the File System Access API (Chrome / Edge). Falls back to an
+ * empty list when unsupported so the caller can offer file-picker import.
+ */
+async function collectAudioFiles(dirHandle: FileSystemDirectoryHandle): Promise<File[]> {
+  const files: File[] = []
+  type DirEntry = { kind: 'file' | 'directory' }
+  for await (const entry of dirHandle as unknown as AsyncIterable<DirEntry>) {
+    if (entry.kind === 'file' && isMusic(entry as unknown as File)) {
+      files.push(entry as unknown as File)
+    } else if (entry.kind === 'directory') {
+      files.push(...(await collectAudioFiles(entry as unknown as FileSystemDirectoryHandle)))
+    }
+  }
+  return files
+}
+
+/**
+ * Bulk-import an entire music folder (your personal collection, any language).
+ * Picks a folder with the native file picker, imports every audio file inside
+ * recursively, and returns the same shape as `importFiles`. Fully local.
+ */
+export async function importFolder(
+  onProgress?: (p: ImportProgress) => void,
+): Promise<ImportResult> {
+  const picker = (window as unknown as { showDirectoryPicker?: (opts: { mode: string; startIn?: string }) => Promise<FileSystemDirectoryHandle> }).showDirectoryPicker
+  if (typeof picker !== 'function') {
+    throw new Error(
+      'Your browser does not support folder picking. Use the file picker (⌘/Ctrl+I) instead.',
+    )
+  }
+  const dirHandle = await picker!({
+    mode: 'read',
+    startIn: 'music',
+  })
+  const files = await collectAudioFiles(dirHandle)
+  files.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
+  return importFiles(files, onProgress)
+}
+
