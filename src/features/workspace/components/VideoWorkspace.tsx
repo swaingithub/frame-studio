@@ -34,6 +34,20 @@ export function VideoWorkspace(): ReactNode {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project?.id])
 
+  // When assets are added to the project from the library (“Add” button),
+  // mirror any new video clips into the sequence so they appear on the
+  // timeline. Additive: never wipes existing clips or undo history.
+  useEffect(() => {
+    if (!project) return
+    const seq = useVideoEditor.getState().sequence
+    const existing = new Set(seq.map((c) => c.assetId))
+    const toAdd = (project.videoAssets ?? []).filter((id) => !existing.has(id))
+    for (const id of toAdd) {
+      const asset = assets?.find((a) => a.id === id)
+      if (asset?.kind === 'video') useVideoEditor.getState().addClip(id)
+    }
+  }, [project, assets])
+
   // Keep asset durations in the store (drives layout + trim sanitizing).
   useEffect(() => {
     if (!assets) return
