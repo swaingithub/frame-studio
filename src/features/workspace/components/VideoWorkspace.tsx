@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Clapperboard, Copy, Film, Image as ImageIcon, Music2, Plus, Smile, Trash2, UploadCloud, Type as TypeIcon, Blend as BlendIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Clapperboard, Copy, Film, Image as ImageIcon, Music2, Plus, Scissors, Smile, Trash2, UploadCloud, Type as TypeIcon, Blend as BlendIcon } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { formatDuration } from '../../../core/format'
@@ -145,7 +145,7 @@ export function VideoWorkspace(): ReactNode {
       ) : null}
 
       {/* Stage */}
-      <div className={cn('flex min-h-0 flex-1 flex-col bg-stage', phone && 'order-1')}>
+      <div className={cn('flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_78%,white),var(--c-stage)_72%)] p-3 sm:p-5 lg:p-8 dark:bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_82%,white),var(--c-stage)_72%)]', phone && 'order-1')}>
         {sequence.length > 0 ? (
           <VideoStage />
         ) : (
@@ -153,12 +153,36 @@ export function VideoWorkspace(): ReactNode {
         )}
       </div>
 
+      {!phone && sequence.length > 0 ? <QuickEditBar hasSelection={activeClipId !== null} /> : null}
+
       {/* CapCut-style thumb bar (phones only) */}
       {phone ? (
         <div className="order-4">
           <MobileVideoBar />
         </div>
       ) : null}
+    </div>
+  )
+}
+
+function QuickEditBar({ hasSelection }: { hasSelection: boolean }): ReactNode {
+  const editor = useVideoEditor.getState()
+  const actions = [
+    { label: 'Split', icon: <Scissors size={13} />, run: () => editor.splitAtPlayhead() },
+    { label: 'Add text', icon: <TypeIcon size={13} />, run: () => editor.addTextOverlay() },
+    { label: 'Duplicate', icon: <Copy size={13} />, run: () => editor.activeClipId && editor.duplicateClip(editor.activeClipId) },
+  ]
+  return (
+    <div className="flex shrink-0 items-center justify-center gap-1 border-t border-line bg-panel px-3 py-2" role="toolbar" aria-label="Quick edit tools">
+      <span className="mr-2 text-[10px] font-semibold uppercase tracking-wide text-lo">Quick edit</span>
+      {actions.map((a) => (
+        <button key={a.label} type="button" disabled={!hasSelection} onClick={a.run}
+          title={a.label === 'Split' ? 'Cut the selected clip at the playhead' : a.label === 'Add text' ? 'Place a text layer over the video' : 'Make a second copy of the selected clip'}
+          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-line bg-elevated px-3 text-[11px] font-medium text-hi transition-colors hover:border-accent/50 hover:bg-hover disabled:opacity-40">
+          <span className="text-accent" aria-hidden>{a.icon}</span>{a.label}
+        </button>
+      ))}
+      <span className="ml-2 text-[10px] text-lo">Select a clip to edit it</span>
     </div>
   )
 }
@@ -192,12 +216,16 @@ function EmptySequence({ addable }: { addable: MediaAsset[] }): ReactNode {
 function SelectClipHint({ hasAssets }: { hasAssets: boolean }): ReactNode {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-      <Clapperboard size={30} className="text-lo" />
-      <p className="max-w-96 text-sm text-lo">
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft"><Clapperboard size={26} className="text-accent" /></span>
+      <div>
+      <p className="text-base font-semibold text-hi">Build your video here</p>
+      <p className="mt-1 max-w-96 text-sm text-lo">
         {hasAssets
-          ? 'Add clips to the timeline above to start editing.'
-          : 'Assemble, trim, split, speed-ramp and grade your videos here — with the same looks as photos. Import media in the library first.'}
+          ? 'Choose a clip above to add it to your timeline, then start with Trim or Split.'
+          : 'Import a video from the Library to get started. Then trim it, add text or music, and export.'}
       </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-2 text-[10px] text-lo"><span className="rounded-full bg-elevated px-2.5 py-1">1 · Add clips</span><span className="rounded-full bg-elevated px-2.5 py-1">2 · Edit</span><span className="rounded-full bg-elevated px-2.5 py-1">3 · Export</span></div>
     </div>
   )
 }

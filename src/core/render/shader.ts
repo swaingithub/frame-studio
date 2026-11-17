@@ -22,6 +22,7 @@ uniform sampler2D uTex;
 uniform mat3 uUVMatrix;     // output uv (y-down) -> source uv (y-down)
 uniform vec2 uInvSource;    // 1/source pixel size, for neighbor taps
 uniform vec2 uOutSize;      // output size in px
+uniform float uFlipY;       // WebGL image sources need y inversion; video frames do not
 
 uniform float uExposure;
 uniform float uContrast;
@@ -89,7 +90,7 @@ vec2 chromaOf(vec3 c) {
 
 vec3 sampleSrc(vec2 uvYD) {
   // uv (y-down) → texture uv (y-up): flip both ends
-  vec2 texUV = vec2(uvYD.x, 1.0 - uvYD.y);
+  vec2 texUV = vec2(uvYD.x, mix(uvYD.y, 1.0 - uvYD.y, uFlipY));
   if (texUV.x < 0.0 || texUV.x > 1.0 || texUV.y < 0.0 || texUV.y > 1.0) {
     return vec3(0.0);
   }

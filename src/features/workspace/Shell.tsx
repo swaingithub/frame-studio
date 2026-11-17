@@ -10,7 +10,7 @@ import { LibraryPanel } from '../library/components/LibraryPanel'
 import { useProjectsStore, useCurrentProject } from '../projects/store'
 import { useLibraryStore } from '../library/store'
 import { useImport } from '../library/components/useImport'
-import { useUIStore } from '../../ui/uiStore'
+import { clampPanelWidth, useUIStore } from '../../ui/uiStore'
 import { PanelResizer } from '../../ui/panels'
 import { useMediaQuery, DESKTOP_QUERY, PHONE_QUERY } from '../../ui/useMediaQuery'
 import { cn } from '../../lib/cn'
@@ -85,10 +85,10 @@ export function Shell(): ReactNode {
         {/* Left: media library (inline on desktop, drawer on compact) */}
         {desktop && leftOpen ? (
           <>
-            <div style={{ width: leftWidth }} className="h-full min-w-0 shrink-0 border-r border-line bg-panel">
+            <div style={{ width: clampPanelWidth(leftWidth) }} className="h-full min-w-0 shrink-0 border-r border-line bg-panel">
               <LibraryPanel />
             </div>
-            <PanelResizer side="left" width={leftWidth} onResize={setLeftWidth} />
+            <PanelResizer side="left" width={clampPanelWidth(leftWidth)} onResize={setLeftWidth} />
           </>
         ) : null}
 
@@ -131,8 +131,8 @@ export function Shell(): ReactNode {
         {/* Right: inspector (inline on desktop, drawer/sheet on compact) */}
         {desktop && rightOpen ? (
           <>
-            <PanelResizer side="right" width={rightWidth} onResize={setRightWidth} />
-            <div style={{ width: rightWidth }} className="h-full min-w-0 shrink-0 border-l border-line bg-panel">
+            <PanelResizer side="right" width={clampPanelWidth(rightWidth)} onResize={setRightWidth} />
+            <div style={{ width: clampPanelWidth(rightWidth) }} className="h-full min-w-0 shrink-0 border-l border-line bg-panel">
               <InspectorPanel />
             </div>
           </>
@@ -233,7 +233,7 @@ function StatusBar(): ReactNode {
 
   return (
     <footer className="flex min-h-6 shrink-0 items-center gap-3 overflow-hidden border-t border-line bg-panel px-3 py-0.5 pb-[env(safe-area-inset-bottom)] text-[10px] text-lo">
-      <span className={cn('flex shrink-0 items-center gap-1.5', saveState === 'saving' && 'text-accent')}>
+      <span role="status" aria-live="polite" className={cn('flex shrink-0 items-center gap-1.5', saveState === 'saving' && 'text-accent')}>
         <span
           className={cn('h-1.5 w-1.5 rounded-full', !project ? 'bg-lo/40' : saveState === 'saving' ? 'bg-accent animate-pulse' : 'bg-emerald-500')}
           aria-hidden

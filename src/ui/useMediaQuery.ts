@@ -23,10 +23,10 @@ export function useMediaQuery(query: string): boolean {
 
 /**
  * True when there is room for the inline three-column editor. Below this the
- * fixed 300 px + 320 px side panels would squeeze the stage, so the shell
- * switches to overlay drawers instead. (1280-wide laptops stay inline.)
+ * fixed side panels would squeeze the stage, so the shell switches to overlay
+ * drawers instead. Keep the inline layout for roomy desktop workspaces only.
  */
-export const DESKTOP_QUERY = '(min-width: 1180px)'
+export const DESKTOP_QUERY = '(min-width: 1280px)'
 /** True for narrow phones; the inspector becomes a bottom sheet. */
 export const PHONE_QUERY = '(max-width: 767px)'
 /** Coarse pointers (finger/stylus) get larger hit targets. */

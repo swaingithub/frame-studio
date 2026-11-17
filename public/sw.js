@@ -6,7 +6,8 @@
  * fall back to the cached shell offline; hashed build assets are cache-first.
  * User media lives in IndexedDB/OPFS, never here.
  */
-const CACHE = 'frame-studio-v1'
+// Bump when the shell/UI changes so installed builds invalidate stale assets.
+const CACHE = 'frame-studio-v2'
 
 self.addEventListener('install', () => {
   self.skipWaiting()

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { AlertTriangle, Camera, Download, Eye, Pause, Play, ShieldQuestion } from 'lucide-react'
+import { AlertTriangle, Camera, Download, Eye, Pause, Play, RotateCcw, ShieldQuestion } from 'lucide-react'
 import { createDefaultEditDoc, defaultGeometry, type GeometryValues } from '../../../core/adjustments/edits'
 import { computeHistogram, type Histogram } from '../../../core/render/histogram'
 import { containRect, coverRect } from '../../../core/render/fit'
@@ -61,12 +61,14 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
   const music = useVideoEditor((s) => s.music)
   const durations = useVideoEditor((s) => s.durations)
   const playing = useVideoEditor((s) => s.playing)
+  const currentTime = useVideoEditor((s) => s.currentTime)
   const bypass = useVideoEditor((s) => s.bypass)
   const activeClipId = useVideoEditor((s) => s.activeClipId)
   const doc = useVideoEditor((s) => s.doc)
   const canvasSettings = useVideoEditor((s) => s.canvas)
 
   const layout = useMemo(() => layoutOf(clips, durations), [clips, durations])
+  const atEnd = layout.total > 0 && currentTime >= layout.total - 0.05 && !playing
 
   const containerRef = useRef<HTMLDivElement>(null)
   const stageAreaRef = useRef<HTMLDivElement>(null)
@@ -1041,17 +1043,6 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
     }
   }, [playing, music])
 
-  const togglePlay = useCallback(async (): Promise<void> => {
-    const st = useVideoEditor.getState()
-    if (st.playing) {
-      st.setPlaying(false)
-      return
-    }
-    if (st.sequence.length === 0) return
-    if (globalT.current >= (ctrlLayout.current.total - 0.05)) globalT.current = 0
-    st.setPlaying(true)
-  }, [])
-
   const seekTo = useCallback(
     (t: number): void => {
       const layoutNow = ctrlLayout.current
@@ -1112,6 +1103,32 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
     },
     [assignSlot, composite, paintTopLayers],
   )
+
+  const togglePlay = useCallback(async (): Promise<void> => {
+    const st = useVideoEditor.getState()
+    if (st.playing) {
+      st.setPlaying(false)
+      return
+    }
+    if (st.sequence.length === 0) return
+    // Industry-standard replay behavior: once the sequence reaches its end,
+    // load the first clip before setting `playing`. Resetting only the store
+    // time can leave the last HTMLMediaElement in its ended state while the
+    // sequence is asynchronously switching back to clip one.
+    if (globalT.current >= (ctrlLayout.current.total - 0.05)) {
+      const first = ctrlLayout.current.entries[0]
+      if (first) {
+        const firstSrc = clipSrcAt(first.clip, 0, ctrlDurations.current[first.clip.assetId] ?? 0)
+        await assignSlot(main.current, first.clip, firstSrc, true)
+        slotEl(other(main.current))?.pause()
+        globalT.current = 0
+        storeFns.current.setTime(0)
+        lastRenderKey.current = ''
+        lastPaintedT.current = -1
+      }
+    }
+    st.setPlaying(true)
+  }, [assignSlot])
 
   // Keyboard: space to play/pause, hold \ to compare, ⌘Z undo.
   useEffect(() => {
@@ -1435,8 +1452,8 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
           </div>
         ) : null}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <Button size="icon" variant="subtle" aria-label={playing ? 'Pause' : 'Play'} onClick={() => void togglePlay()} className="fs-tool-hit">
-            {playing ? <Pause size={14} /> : <Play size={14} />}
+          <Button size="icon" variant="subtle" aria-label={playing ? 'Pause' : atEnd ? 'Replay' : 'Play'} title={playing ? 'Pause' : atEnd ? 'Replay from the beginning' : 'Play'} onClick={() => void togglePlay()} className="fs-tool-hit">
+            {playing ? <Pause size={14} /> : atEnd ? <RotateCcw size={14} /> : <Play size={14} />}
           </Button>
           <VideoTimeline onSeek={seekTo} />
         </div>

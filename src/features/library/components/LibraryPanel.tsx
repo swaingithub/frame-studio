@@ -11,10 +11,11 @@ import {
   Plus,
   FolderInput,
   X,
+  PanelLeftClose,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { type AssetKind, type MediaAsset } from '../../../core/db/schema'
-import { allTags, applyLibraryFilters, type LibrarySort } from '../filters'
+import { allTags, applyLibraryFilters, defaultFilters, type LibrarySort } from '../filters'
 import { setTagOn, useLibraryStore } from '../store'
 import { updateAssets } from '../store'
 import { deleteAssetCompletely } from '../import'
@@ -26,6 +27,7 @@ import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog'
 import { useProjectsStore } from '../../projects/store'
 import { formatBytes } from '../../../core/format'
 import { useStorageEstimate } from '../../../lib/hooks'
+import { useUIStore } from '../../../ui/uiStore'
 import type { ReactNode } from 'react'
 
 const kinds: Array<{ value: 'all' | AssetKind; label: string; icon: ReactNode }> = [
@@ -52,6 +54,7 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
   const addAssetsToCurrent = useProjectsStore((s) => s.addAssetsToCurrent)
   const removeAssetFromCurrent = useProjectsStore((s) => s.removeAssetFromCurrent)
   const usage = useStorageEstimate()
+  const toggleLeft = useUIStore((s) => s.toggleLeft)
 
   const shown = useMemo(() => (assets ? applyLibraryFilters(assets, filters) : []), [assets, filters])
   const tags = useMemo(() => (assets ? allTags(assets) : []), [assets])
@@ -82,10 +85,12 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
-      <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line px-3">
-        <FolderInput size={14} className="text-lo" />
-        <h2 className="flex-1 text-xs font-semibold uppercase tracking-wide text-lo">Library</h2>
-        <span className="text-[10px] text-lo">{assets ? `${assets.length} items` : '…'}</span>
+      <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft"><FolderInput size={14} className="text-accent" /></span>
+        <div className="min-w-0 flex-1">
+          <h2 className="whitespace-nowrap text-sm font-semibold tracking-tight text-hi">Library</h2>
+          <p className="truncate text-[10px] text-lo">{assets ? `${assets.length} ${assets.length === 1 ? 'item' : 'items'} ready` : 'Loading media…'}</p>
+        </div>
         <Button size="sm" variant="primary" onClick={pickFiles} disabled={importing} title="Import files (⌘I)">
           <Plus size={13} />
           Import
@@ -99,16 +104,30 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
           >
             <X size={14} />
           </button>
-        ) : null}
+        ) : (
+          <button
+            type="button"
+            aria-label="Collapse library"
+            title="Collapse library"
+            onClick={toggleLeft}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-lo hover:bg-hover hover:text-hi"
+          >
+            <PanelLeftClose size={14} />
+          </button>
+        )}
       </div>
 
       {/* Progress */}
       {importing ? (
-        <div className="h-0.5 w-full bg-accent-soft">
+        <div className="flex h-7 items-center gap-2 border-b border-line bg-accent-soft/40 px-3 text-[10px] text-accent" role="status" aria-live="polite">
+          <span className="shrink-0 font-medium">Importing media</span>
+          <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-accent/15" role="progressbar" aria-label="Import progress" aria-valuemin={0} aria-valuemax={filters.importTotal || 1} aria-valuenow={filters.importDone}>
           <div
-            className="h-full bg-accent transition-all"
+            className="h-full rounded-full bg-accent transition-all"
             style={{ width: `${filters.importTotal === 0 ? 20 : (filters.importDone / filters.importTotal) * 100}%` }}
           />
+          </div>
+          <span className="shrink-0 tabular-nums">{filters.importTotal ? `${filters.importDone}/${filters.importTotal}` : 'Preparing…'}</span>
         </div>
       ) : (
         <div className="h-0.5" />
@@ -126,14 +145,14 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
             className="h-8 w-full rounded-md border border-line bg-elevated pl-7 pr-2 text-xs text-hi placeholder:text-lo/70 focus:border-accent focus:outline-none"
           />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto pb-0.5">
           {kinds.map((k) => (
             <button
               key={k.value}
               type="button"
               aria-pressed={filters.kind === k.value}
               className={cn(
-                'flex items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors',
+                'flex shrink-0 items-center gap-1 rounded-md px-2 py-1 text-[11px] transition-colors',
                 filters.kind === k.value ? 'bg-accent-soft text-accent' : 'text-lo hover:bg-hover hover:text-hi',
               )}
               onClick={() => filters.patch({ kind: k.value })}
@@ -143,7 +162,7 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
           <label className="flex items-center gap-1 text-[11px] text-lo" title="Favorites only">
             <button
               type="button"
@@ -261,6 +280,15 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
                   ? 'Drop photos, videos, or audio anywhere — everything stays on this device.'
                   : 'Try clearing the search or filters.'}
               </p>
+              {(assets?.length ?? 0) > 0 ? (
+                <button
+                  type="button"
+                  className="mt-3 rounded-lg bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+                  onClick={() => filters.patch(defaultFilters)}
+                >
+                  Clear filters
+                </button>
+              ) : null}
             </div>
           }
         />

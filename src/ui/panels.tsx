@@ -47,6 +47,18 @@ export function PanelResizer({ side, width, onResize }: PanelResizerProps): Reac
     document.body.style.userSelect = ''
   }, [])
 
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      const step = e.shiftKey ? 24 : 8
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault()
+        const direction = e.key === 'ArrowRight' ? 1 : -1
+        onResize(clampPanelWidth(side === 'left' ? width + direction * step : width - direction * step))
+      }
+    },
+    [onResize, side, width],
+  )
+
   return (
     <div
       role="separator"
@@ -54,7 +66,8 @@ export function PanelResizer({ side, width, onResize }: PanelResizerProps): Reac
       aria-label={`Resize ${side} panel`}
       aria-valuenow={width}
       aria-valuemin={PANEL_MIN}
-      tabIndex={-1}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}

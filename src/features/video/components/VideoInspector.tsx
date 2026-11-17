@@ -180,7 +180,7 @@ export function VideoInspectorBody({ histogram, simpleMode = true }: { histogram
         const isCollapsed = collapsed[section] === true
         const isTouched = params.some((p) => doc.adjustments[p.key] !== p.def)
         return (
-          <section key={section}>
+          <section key={section} className="rounded-xl border border-line/70 bg-elevated/35 p-3">
             <button
               type="button"
               onClick={() => setCollapsed((c) => ({ ...c, [section]: !c[section] }))}

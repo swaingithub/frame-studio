@@ -54,19 +54,27 @@ export function Header({ compact = false, openPanel = null, onTogglePanel }: Hea
       {/* Workspace tabs — meaningless without a project, so don't show a
           disabled ghost of them on the welcome screen. */}
       {project ? (
-        <nav className="mx-auto flex shrink-0 items-center gap-1" aria-label="Workspace switcher">
+        <nav className="mx-auto flex shrink-0 items-center gap-0.5 rounded-xl border border-line bg-elevated p-0.5 shadow-sm" aria-label="Workspace switcher" role="tablist">
           {(['photo', 'video'] as const).map((ws) => (
             <button
               key={ws}
               type="button"
-              aria-pressed={project?.activeWorkspace === ws}
+              role="tab"
+              aria-selected={project?.activeWorkspace === ws}
+              tabIndex={project?.activeWorkspace === ws ? 0 : -1}
               onClick={() => {
                 if (!project) return
                 updateCurrent((doc) => ({ ...doc, activeWorkspace: ws }))
               }}
+              onKeyDown={(event) => {
+                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
+                event.preventDefault()
+                const next = event.key === 'ArrowRight' ? (ws === 'photo' ? 'video' : 'photo') : (ws === 'video' ? 'photo' : 'video')
+                updateCurrent((doc) => ({ ...doc, activeWorkspace: next }))
+              }}
               className={cn(
-                'rounded-md px-2 py-1.5 text-xs font-medium capitalize transition-colors sm:px-3',
-                project?.activeWorkspace === ws ? 'bg-accent-soft text-accent' : 'text-lo hover:bg-hover hover:text-hi',
+                'rounded-lg px-3 py-1.5 text-xs font-medium capitalize transition-all sm:px-4',
+                project?.activeWorkspace === ws ? 'bg-accent text-onaccent shadow-sm' : 'text-lo hover:bg-hover hover:text-hi',
               )}
             >
               {ws}

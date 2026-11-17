@@ -51,7 +51,7 @@ export function PhotoWorkspace(): ReactNode {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Editor stage */}
-      <div className="relative flex min-h-0 flex-1 items-stretch bg-stage">
+      <div className="relative flex min-h-0 flex-1 items-stretch bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_78%,white),var(--c-stage)_72%)] p-3 sm:p-5 lg:p-8 dark:bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_82%,white),var(--c-stage)_72%)]">
         {active ? (
           <>
             <EditorCanvas
@@ -62,13 +62,14 @@ export function PhotoWorkspace(): ReactNode {
             />
             <ExportDialog asset={active} open={exportOpen} onClose={() => setExportOpen(false)} />
           </>
-        ) : photos.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
-            <ImageIcon size={28} className="text-lo" />
-            <p className="text-sm text-hi">Add photos to this project to get started</p>
-            <p className="max-w-80 text-xs text-lo">
-              Select some in the library and press “Add”, or drop image files anywhere.
-            </p>
+          ) : photos.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft"><ImageIcon size={26} className="text-accent" /></span>
+            <div>
+              <p className="text-base font-semibold text-hi">Create your first edit</p>
+              <p className="mt-1 max-w-80 text-sm text-lo">Add a photo from the Library, then choose a Look and crop it for where you want to share it.</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2 text-[10px] text-lo"><span className="rounded-full bg-elevated px-2.5 py-1">1 · Add a photo</span><span className="rounded-full bg-elevated px-2.5 py-1">2 · Make it yours</span><span className="rounded-full bg-elevated px-2.5 py-1">3 · Export</span></div>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-lo">

@@ -151,11 +151,13 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
   const [box, setBox] = useState({ w: 0, h: 0 })
   const [outDims, setOutDims] = useState({ w: 0, h: 0 })
   const [fallback, setFallback] = useState(false)
+  const [renderReady, setRenderReady] = useState(false)
 
   // Decode + cache the source when the asset (or its blob) changes.
   useEffect(() => {
     let alive = true
     setSource(null)
+    setRenderReady(false)
     if (!blob) return
     void loadSource(asset.id, blob)
       .then((entry) => {
@@ -211,6 +213,7 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
           })
           setOutDims({ w: result.plan.outW, h: result.plan.outH })
         }
+        setRenderReady(true)
         // Throttled histogram from a small readback
         const now = performance.now()
         const histCanvas = histRef.current
@@ -226,6 +229,7 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
         }
       } catch (err) {
         console.error('Render failed', err)
+        setRenderReady(true)
       }
     })
     return () => {
@@ -280,14 +284,19 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
   const straightenActive = usePhotoEditor((s) => s.straightenActive)
 
   return (
-    <div ref={containerRef} className="relative flex h-full min-h-0 w-full items-center justify-center p-2 pb-[calc(0.5rem+6vh)] sm:p-4 sm:pb-[calc(1rem+6vh)]">
+    <div ref={containerRef} aria-busy={!source || !renderReady} className="relative flex h-full min-h-0 w-full items-center justify-center p-2 pb-[calc(0.5rem+6vh)] sm:p-4 sm:pb-[calc(1rem+6vh)]">
       <div style={{ width: fit.w || undefined, height: fit.h || undefined }} className="relative">
+        {!source || !renderReady ? (
+          <div className="absolute inset-0 z-20 flex min-h-40 items-center justify-center rounded-md bg-elevated text-xs text-lo" role="status" aria-live="polite">
+            <span className="flex items-center gap-2"><span className="h-2 w-2 animate-pulse rounded-full bg-accent" />Preparing preview…</span>
+          </div>
+        ) : null}
         <canvas
           ref={canvasRef}
           width={outDims.w}
           height={outDims.h}
           style={{ width: '100%', height: '100%' }}
-          className="block rounded-md bg-black shadow-2xl"
+          className="block rounded-lg bg-black shadow-[0_18px_50px_rgba(15,23,42,0.28)] ring-1 ring-black/10 dark:ring-white/10"
           aria-label={`Preview of ${asset.name}`}
         />
         {/* Text overlay layer: transparent 2D canvas above the graded frame.

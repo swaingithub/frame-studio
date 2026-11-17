@@ -5,11 +5,11 @@ test('app boots: editor shell and privacy footer render', async ({ page }) => {
   await expect(page).toHaveTitle(/Frame Studio/i)
   // Workspace tabs only appear once a project is open — the welcome screen
   // must not show a disabled ghost of them.
-  await expect(page.getByRole('button', { name: 'photo editor' })).toHaveCount(0)
-  await expect(page.getByText('Try a sample project')).toBeVisible({ timeout: 10_000 })
-  await page.getByRole('button', { name: /Try a sample project/ }).click()
-  await expect(page.getByRole('button', { name: 'photo editor' })).toBeVisible({ timeout: 10_000 })
-  await expect(page.getByRole('button', { name: 'video editor' })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'photo editor' })).toHaveCount(0)
+  await expect(page.getByText('Learn with a sample')).toBeVisible({ timeout: 10_000 })
+  await page.getByRole('button', { name: /Learn with a sample/ }).click()
+  await expect(page.getByRole('tab', { name: 'photo editor' })).toBeVisible({ timeout: 10_000 })
+  await expect(page.getByRole('tab', { name: 'video editor' })).toBeVisible()
 })
 
 test('CSP meta is present and blocks nothing the shell needs', async ({ page }) => {

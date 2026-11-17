@@ -29,7 +29,7 @@ export function MobileVideoBar(): ReactNode {
     return (
       <>
         <div
-          className="flex shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-panel px-2 pt-1.5"
+          className="flex shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
           style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
           role="toolbar"
           aria-label="Clip tools"
@@ -55,8 +55,8 @@ export function MobileVideoBar(): ReactNode {
             onPress={() => setSheet('edit')}
             className="min-w-[4.25rem] shrink-0"
           />
-          <BarButton icon={<Copy size={18} />} label="Copy" onPress={() => duplicateClip(activeClipId)} className="min-w-[4.25rem] shrink-0" />
-          <BarButton icon={<Trash2 size={18} />} label="Delete" onPress={() => removeClip(activeClipId)} className="min-w-[4.25rem] shrink-0" />
+          <BarButton icon={<Copy size={18} />} label="Copy" onPress={() => duplicateClip(activeClipId)} className="hidden min-w-[4.25rem] shrink-0 min-[520px]:flex" />
+          <BarButton icon={<Trash2 size={18} />} label="Delete" onPress={() => removeClip(activeClipId)} className="hidden min-w-[4.25rem] shrink-0 min-[520px]:flex" />
           <BarButton icon={<Check size={18} />} label="Done" primary onPress={() => setActiveClip(null)} className="min-w-[4.25rem] shrink-0" />
         </div>
         {sheet === 'edit' ? (
@@ -71,7 +71,7 @@ export function MobileVideoBar(): ReactNode {
   return (
     <>
       <div
-        className="flex shrink-0 items-center justify-around gap-1 border-t border-line bg-panel px-2 pt-1.5"
+        className="flex shrink-0 items-center justify-around gap-1 border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
         style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
       >
         <BarButton icon={<Undo2 size={18} />} label="Undo" onPress={undo} />

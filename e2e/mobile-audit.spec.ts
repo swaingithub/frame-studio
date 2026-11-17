@@ -21,7 +21,7 @@ test('mobile audit screenshots', async ({ page }) => {
   }
 
   // Try sample project if present
-  const sample = page.getByRole('button', { name: /sample project/i })
+  const sample = page.getByRole('button', { name: /learn with a sample|sample project/i })
   if (await sample.count()) {
     await sample.click()
     await page.waitForSelector('main canvas', { timeout: 15000 }).catch(() => undefined)

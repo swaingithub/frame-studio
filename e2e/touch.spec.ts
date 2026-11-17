@@ -22,7 +22,7 @@ test('touch timeline: pan scrubs, contextual toolbar appears', async ({ browser 
   await page.goto('/')
   await page.waitForTimeout(1000)
 
-  const sample = page.getByRole('button', { name: /sample project/i })
+  const sample = page.getByRole('button', { name: /learn with a sample/i })
   if (await sample.count()) await sample.click()
   // The coach mounts when the project finishes loading (can lag the click),
   // so dismiss it wherever it pops up.
@@ -37,7 +37,7 @@ test('touch timeline: pan scrubs, contextual toolbar appears', async ({ browser 
 
   // The video workspace: switch to Video, select the sample clip on the track.
   // (Mobile hides the " editor" suffix on the workspace tabs.)
-  await page.getByRole('button', { name: 'video', exact: true }).click().catch(() => undefined)
+  await page.getByRole('tab', { name: 'video', exact: true }).click().catch(() => undefined)
   await page.waitForTimeout(1500)
   const track = page.locator('[data-sequence-track]')
   if (await track.count()) {

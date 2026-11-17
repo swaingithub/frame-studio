@@ -230,7 +230,6 @@ export function ManageProjectsDialog({
 
   useEffect(() => {
     if (open) void refreshStorage()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   return (

@@ -162,8 +162,8 @@ export const AssetCard = memo(function AssetCard({
         }
       }}
       className={cn(
-        'group relative cursor-pointer overflow-hidden rounded-lg border bg-elevated transition-[border-color,box-shadow]',
-        selected ? 'border-accent shadow-[0_0_0_1px_var(--c-accent)]' : 'border-line hover:border-lo/40',
+        'group relative cursor-pointer overflow-hidden rounded-xl border bg-elevated shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:shadow-md',
+        selected ? 'border-accent shadow-[0_0_0_1px_var(--c-accent),0_6px_18px_rgba(56,103,239,0.16)]' : 'border-line/80 hover:border-lo/40',
       )}
     >
       {/* Thumbnail region (fixed aspect keeps the grid calm while loading).

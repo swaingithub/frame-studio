@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { PanelRightClose, Sparkles } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { assetsByIds } from '../../../core/projectAssets'
@@ -12,6 +12,7 @@ import { useVideoEditor } from '../../video/store'
 import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
 import type { Histogram } from '../../../core/render/histogram'
 import type { ReactNode } from 'react'
+import { useUIStore } from '../../../ui/uiStore'
 
 /**
  * Right-hand inspector. Photo workspace: the live histogram + adjustment
@@ -22,6 +23,7 @@ export function InspectorPanel(): ReactNode {
   const project = useCurrentProject()
   const assets = useAssets()
   const workspace = project?.activeWorkspace ?? 'photo'
+  const toggleRight = useUIStore((s) => s.toggleRight)
 
   const activeId = workspace === 'photo' ? project?.activePhotoId : project?.activeVideoId
   const selectedAsset = useMemo(() => {
@@ -37,16 +39,41 @@ export function InspectorPanel(): ReactNode {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-panel px-3">
+      <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft"><Sparkles size={14} className="text-accent" /></span>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold tracking-tight text-hi">Edit your {workspace === 'photo' ? 'photo' : 'video'}</h2>
           <p className="text-[10px] text-lo">{simpleMode ? 'Quick tools for a great result' : 'Advanced controls'}</p>
         </div>
-        <button type="button" onClick={() => setSimpleMode((v) => !v)} aria-pressed={!simpleMode}
-          className="rounded-lg border border-line bg-elevated px-2.5 py-1.5 text-[10px] font-medium text-hi shadow-sm hover:border-accent/50 hover:bg-hover">
-          {simpleMode ? 'Advanced' : 'Beginner'}
+        <div className="flex items-center gap-1">
+        <div className="flex items-center rounded-lg border border-line bg-elevated p-0.5" role="group" aria-label="Editing mode">
+          <button
+            type="button"
+            onClick={() => setSimpleMode(true)}
+            aria-pressed={simpleMode}
+            className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${simpleMode ? 'bg-panel text-hi shadow-sm' : 'text-lo hover:text-hi'}`}
+          >
+            Beginner
+          </button>
+          <button
+            type="button"
+            onClick={() => setSimpleMode(false)}
+            aria-pressed={!simpleMode}
+            className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${!simpleMode ? 'bg-accent text-onaccent shadow-sm' : 'text-lo hover:text-hi'}`}
+          >
+            Advanced
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label="Collapse inspector"
+          title="Collapse inspector"
+          onClick={toggleRight}
+          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-lo hover:bg-hover hover:text-hi"
+        >
+          <PanelRightClose size={14} />
         </button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -111,24 +138,23 @@ function AssetInspectorCard({ assetId }: { assetId: string }): ReactNode {
     )
   }
   return (
-    <div className="rounded-lg border border-line bg-elevated p-3">
-      <div className="mb-2 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-md border border-line bg-[var(--c-stage)]">
+    <div className="flex items-center gap-3 rounded-xl border border-line bg-elevated p-2.5 shadow-sm">
+      <div className="flex h-16 w-24 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-[var(--c-stage)]">
         {thumb ? (
           <img src={thumb} alt="" className="h-full w-full object-cover" />
         ) : (
           <span className="animate-pulse" aria-hidden />
         )}
       </div>
-      <p className="truncate text-sm font-medium text-hi">{asset.name}</p>
-      <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[11px] text-lo">
-        <dt>Kind</dt>
-        <dd className="capitalize text-hi">{asset.kind}</dd>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-semibold text-hi">{asset.name}</p>
+        <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-[10px] text-lo">
+          <dt>Kind</dt>
+          <dd className="capitalize text-hi">{asset.kind}</dd>
         {asset.width && asset.height ? (
           <>
             <dt>Dimensions</dt>
-            <dd className="text-hi">
-              {asset.width} × {asset.height}
-            </dd>
+            <dd className="text-hi">{asset.width} × {asset.height}</dd>
           </>
         ) : null}
         {asset.duration !== null ? (
@@ -137,17 +163,10 @@ function AssetInspectorCard({ assetId }: { assetId: string }): ReactNode {
             <dd className="tabular-nums text-hi">{formatDuration(asset.duration)}</dd>
           </>
         ) : null}
-        <dt>Size</dt>
-        <dd className="text-hi">{formatBytes(asset.size)}</dd>
-        <dt>Type</dt>
-        <dd className="truncate text-hi">{asset.mimeType}</dd>
-        {asset.tags.length > 0 ? (
-          <>
-            <dt>Tags</dt>
-            <dd className="text-hi">{asset.tags.join(', ')}</dd>
-          </>
-        ) : null}
-      </dl>
+          <dt>Size</dt>
+          <dd className="text-hi">{formatBytes(asset.size)}</dd>
+        </dl>
+      </div>
     </div>
   )
 }

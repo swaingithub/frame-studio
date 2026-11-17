@@ -310,7 +310,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
       }
       if (dragMode.current === 'scrub') onSeek(t)
     },
-    [activeClipId, beginGesture, layout.entries, onSeek, timeAt, xOf],
+    [activeClipId, beginGesture, layout.entries, onSeek, pxPerSec, timeAt, xOf],
   )
 
   const onPointerMove = useCallback(
@@ -447,6 +447,12 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex items-center justify-between px-0.5">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-lo">Timeline</span>
+        <span className="text-[10px] text-lo" aria-live="polite">
+          {activeOverlayId !== null ? 'Overlay selected' : activeClipId !== null ? 'Clip selected' : 'Select a clip to edit'}
+        </span>
+      </div>
       {!IS_TOUCH ? null : (
         <p className="truncate px-0.5 text-[10px] leading-tight text-lo" role="status">
           {hint}
@@ -485,8 +491,8 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
             <span className="fs-tool-label">Delete</span>
           </button>
         </Tooltip>
-        <span className="ml-auto pr-1 text-[10px] tabular-nums text-lo" aria-hidden>
-          {formatDuration(total)}
+        <span className="ml-auto pr-1 text-[10px] tabular-nums text-lo" aria-label={`Playhead ${formatDuration(currentTime)} of ${formatDuration(total)}`}>
+          {formatDuration(currentTime)} <span className="text-line">/</span> {formatDuration(total)}
         </span>
       </div>
 
@@ -500,6 +506,7 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
           />
         ) : null}
 
+      <TimelineRuler total={total} />
       {/* The track */}
       <div
         ref={trackRef}
@@ -590,6 +597,15 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         />
       ))}
       </div>
+    </div>
+  )
+}
+
+function TimelineRuler({ total }: { total: number }): ReactNode {
+  const marks = Array.from({ length: 6 }, (_, i) => (total * i) / 5)
+  return (
+    <div className="flex h-4 items-end justify-between px-1 text-[9px] tabular-nums text-lo" aria-hidden>
+      {marks.map((t, i) => <span key={i}>{formatDuration(t)}</span>)}
     </div>
   )
 }

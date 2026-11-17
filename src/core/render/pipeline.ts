@@ -17,6 +17,8 @@ export interface RenderOptions {
   maxSize?: number
   /** AI background-removal mask (alpha = subject); omitted = keep all pixels. */
   bgMask?: TexSource | null
+  /** Override source texture orientation. Video textures are already y-down. */
+  flipY?: boolean
 }
 
 export interface RenderResult {
@@ -76,6 +78,7 @@ export function renderEdit(
       matrix: plan.matrix,
       outW,
       outH,
+      flipY: options.flipY ?? !('videoWidth' in source),
       adjustments: shaderFloats(doc.adjustments),
       chromaKey: doc.chromaKey ?? null,
       mask: doc.mask ?? null,

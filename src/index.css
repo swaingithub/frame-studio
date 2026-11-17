@@ -71,6 +71,10 @@
       'Helvetica Neue', Arial, sans-serif;
     overscroll-behavior: none;
   }
+  button,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+  }
   ::selection {
     background: var(--c-accent-soft);
   }
@@ -188,6 +192,18 @@
 }
 .fs-anim-menu-in {
   animation: fs-pop-y-in 0.13s ease-out;
+}
+
+/* Respect the user's motion preference across sheets, menus and toasts. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 .fs-anim-toast-in {
   animation: fs-toast-in 0.2s ease-out;

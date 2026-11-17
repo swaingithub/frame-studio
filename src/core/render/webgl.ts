@@ -62,7 +62,7 @@ function buildProgram(gl: WebGL2RenderingContext): WebGLProgram {
 }
 
 const UNIFORM_NAMES = [
-  'uUVMatrix', 'uInvSource', 'uOutSize', 'uTex',
+  'uUVMatrix', 'uInvSource', 'uOutSize', 'uFlipY', 'uTex',
   'uExposure', 'uContrast', 'uHighlights', 'uShadows', 'uWhites', 'uBlacks',
   'uTemperature', 'uTint', 'uSaturation', 'uVibrance',
   'uSharpness', 'uClarity', 'uNoiseReduction', 'uVignette', 'uGrain',
@@ -152,6 +152,8 @@ export interface GLDrawOptions {
   matrix: Affine
   outW: number
   outH: number
+  /** Whether to invert the source texture vertically (images yes, video no). */
+  flipY?: boolean
   adjustments: Record<string, number>
   /** Chroma key state; null/omitted = no keying (all pixels opaque). */
   chromaKey?: ChromaKey | null
@@ -199,6 +201,7 @@ export function drawGL(
   if (uniforms.uInvSource) {
     gl.uniform2f(uniforms.uInvSource, 1 / Math.max(1, sourceWidth(source)), 1 / Math.max(1, sourceHeight(source)))
   }
+  if (uniforms.uFlipY) gl.uniform1f(uniforms.uFlipY, opts.flipY === false ? 0 : 1)
 
   for (const [name, value] of Object.entries(opts.adjustments)) {
     if (name === 'uTex') continue

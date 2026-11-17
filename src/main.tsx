@@ -14,7 +14,7 @@ useThemeStore.setState({ theme })
 // using Vite's live modules (a SW here would serve stale code).
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => undefined)
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => undefined)
   })
 }
 

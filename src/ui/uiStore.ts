@@ -16,8 +16,9 @@ interface UIState {
   toggleRight: () => void
 }
 
-export const PANEL_MIN = 200
-export const PANEL_MAX = 560
+/** Keep side panels readable without letting them consume the whole editor. */
+export const PANEL_MIN = 220
+export const PANEL_MAX = 420
 
 const clampWidth = (w: number): number => Math.min(PANEL_MAX, Math.max(PANEL_MIN, Math.round(w)))
 

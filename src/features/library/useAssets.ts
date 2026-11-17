@@ -25,7 +25,7 @@ export function useAssetBlob(asset: MediaAsset | null | undefined): Blob | null 
   const blob = useLiveQuery(async () => {
     if (!id || !storageKey) return undefined
     return getBlob({ key: storageKey, storage: storage ?? 'idb' })
-  }, [id])
+  }, [id, storage, storageKey])
   return blob ?? null
 }
 

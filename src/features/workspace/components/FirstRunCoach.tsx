@@ -51,6 +51,15 @@ export function FirstRunCoach(): ReactNode {
     if (!seen) setOpen(true)
   }, [project])
 
+  useEffect(() => {
+    if (!open) return
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') dismiss()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
   const dismiss = (): void => {
     setOpen(false)
     try {
@@ -64,7 +73,7 @@ export function FirstRunCoach(): ReactNode {
   const current = STEPS[step]
 
   return (
-    <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/50 p-4 pb-8 sm:items-center" role="dialog" aria-label="Getting started">
+    <div className="absolute inset-0 z-50 flex items-end justify-center bg-black/50 p-4 pb-8 sm:items-center" role="dialog" aria-modal="true" aria-label="Getting started">
       <div className="w-full max-w-sm rounded-xl bg-panel p-4 shadow-2xl ring-1 ring-line">
         <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-soft">
