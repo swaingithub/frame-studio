@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Sparkles } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { assetsByIds } from '../../../core/projectAssets'
@@ -36,13 +37,15 @@ export function InspectorPanel(): ReactNode {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex h-10 shrink-0 items-center border-b border-line px-3">
-        <h2 className="flex-1 text-xs font-semibold uppercase tracking-wide text-lo">
-          {workspace === 'photo' ? 'Edit — Photo' : 'Edit — Video'}
-        </h2>
+      <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line bg-panel px-3">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft"><Sparkles size={14} className="text-accent" /></span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold tracking-tight text-hi">Edit your {workspace === 'photo' ? 'photo' : 'video'}</h2>
+          <p className="text-[10px] text-lo">{simpleMode ? 'Quick tools for a great result' : 'Advanced controls'}</p>
+        </div>
         <button type="button" onClick={() => setSimpleMode((v) => !v)} aria-pressed={!simpleMode}
-          className="rounded-md bg-elevated px-2 py-1 text-[10px] font-medium text-hi hover:bg-hover">
-          {simpleMode ? 'More tools' : 'Simple mode'}
+          className="rounded-lg border border-line bg-elevated px-2.5 py-1.5 text-[10px] font-medium text-hi shadow-sm hover:border-accent/50 hover:bg-hover">
+          {simpleMode ? 'Advanced' : 'Beginner'}
         </button>
       </div>
 
