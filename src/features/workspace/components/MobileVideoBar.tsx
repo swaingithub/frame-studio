@@ -29,7 +29,7 @@ export function MobileVideoBar(): ReactNode {
     return (
       <>
         <div
-          className="flex shrink-0 items-stretch gap-1 overflow-x-auto border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
+          className="flex min-w-0 w-full shrink-0 items-stretch gap-1 overflow-x-auto overscroll-x-contain border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
           style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
           role="toolbar"
           aria-label="Clip tools"
@@ -71,7 +71,7 @@ export function MobileVideoBar(): ReactNode {
   return (
     <>
       <div
-        className="flex shrink-0 items-center justify-around gap-1 border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
+        className="flex min-w-0 w-full shrink-0 items-center justify-around gap-1 overflow-x-auto overscroll-x-contain border-t border-line bg-panel/95 px-2 pt-1.5 shadow-[0_-8px_24px_rgba(0,0,0,0.18)] backdrop-blur"
         style={{ paddingBottom: 'max(0.375rem, env(safe-area-inset-bottom))' }}
       >
         <BarButton icon={<Undo2 size={18} />} label="Undo" onPress={undo} />
@@ -127,7 +127,7 @@ function BarButton({
       onClick={onPress}
       disabled={disabled}
       className={cn(
-        'flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition-colors disabled:opacity-40',
+        'flex min-h-14 min-w-[4.25rem] flex-none flex-col items-center justify-center gap-0.5 rounded-lg px-1 py-1 text-[10px] font-medium transition-colors disabled:opacity-40',
         primary ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi active:text-hi',
         className,
       )}

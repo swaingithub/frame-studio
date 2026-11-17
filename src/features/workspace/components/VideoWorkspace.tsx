@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Clapperboard, Copy, Film, Image as ImageIcon, Music2, Plus, Scissors, Smile, Trash2, UploadCloud, Type as TypeIcon, Blend as BlendIcon } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Clapperboard, Copy, Film, Image as ImageIcon, Music2, Plus, Scissors, Smile, Trash2, UploadCloud, Type as TypeIcon, Blend as BlendIcon, WandSparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { formatDuration } from '../../../core/format'
@@ -26,6 +26,7 @@ export function VideoWorkspace(): ReactNode {
   const revision = useVideoEditor((s) => s.revision)
   void revision
   const phone = useMediaQuery(PHONE_QUERY)
+  const [previewCollapsed, setPreviewCollapsed] = useState(false)
 
   // Adopt/repair the persisted sequence once the project is known.
   useEffect(() => {
@@ -73,13 +74,13 @@ export function VideoWorkspace(): ReactNode {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {/* Sequence strip (at the bottom on phones, right above the thumb bar) */}
-      <div className={cn('flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-b border-line bg-panel px-3', phone && 'order-3 border-b-0 border-t')}>
+      <div className={cn('flex h-24 shrink-0 items-center gap-2 overflow-x-auto border-b border-line bg-panel px-3 py-2', phone && 'order-3 hidden border-b-0 border-t px-2 py-2')}>
         {sequence.length === 0 ? <EmptySequence addable={addable} /> : null}
         {layout.entries.map((entry, index) => (
           <StripClip
             key={entry.clip.id}
             asset={assetOf(entry.clip.assetId)}
-            name={assetOf(entry.clip.assetId)?.name}
+            name={phone ? `Clip ${index + 1}` : assetOf(entry.clip.assetId)?.name}
             out={entry.out}
             index={index}
             title={entry.clip.title?.text}
@@ -112,24 +113,24 @@ export function VideoWorkspace(): ReactNode {
       {/* Overlay chips: add text / media layers above the base track */}
       {sequence.length > 0 ? (
         <div className={cn('flex h-9 shrink-0 items-center gap-1.5 overflow-x-auto border-b border-line bg-panel px-3', phone && 'order-2')} role="group" aria-label="Add overlay layers">
-          <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-lo" aria-hidden>
+            <span className="sticky left-0 z-10 flex shrink-0 items-center gap-1 bg-panel pr-1 text-[10px] font-semibold uppercase tracking-wide text-lo" aria-hidden>
             <TypeIcon size={11} />
             Overlays
           </span>
           <button
             type="button"
             onClick={() => useVideoEditor.getState().addTextOverlay()}
-            className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-dashed border-accent/50 px-2 text-[11px] text-hi hover:bg-accent-soft"
+            className="sticky left-12 z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-dashed border-accent/50 bg-panel px-2 text-[11px] text-hi shadow-[4px_0_8px_rgba(0,0,0,0.15)] hover:bg-accent-soft"
             aria-label="Add text overlay"
           >
             <Plus size={10} />
             Text
           </button>
-          <StickerButton />
+          <span className="sticky left-[5.25rem] z-10 bg-panel"><StickerButton /></span>
           {(assets ?? [])
             .filter((a) => a.kind === 'video' || a.kind === 'image')
             .slice(0, 4)
-            .map((a) => (
+            .map((a, index) => (
               <button
                 key={a.id}
                 type="button"
@@ -138,7 +139,7 @@ export function VideoWorkspace(): ReactNode {
                 aria-label={`Add ${a.name} as overlay`}
               >
                 {a.kind === 'image' ? <ImageIcon size={10} /> : <Film size={10} />}
-                <span className="max-w-32 truncate">{a.name}</span>
+                <span className="max-w-32 truncate">{phone ? `Layer ${index + 1}` : a.name}</span>
               </button>
             ))}
         </div>
@@ -147,7 +148,15 @@ export function VideoWorkspace(): ReactNode {
       {/* Stage */}
       <div className={cn('flex min-h-0 flex-1 flex-col bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_78%,white),var(--c-stage)_72%)] p-3 sm:p-5 lg:p-8 dark:bg-[radial-gradient(circle_at_50%_35%,color-mix(in_srgb,var(--c-stage)_82%,white),var(--c-stage)_72%)]', phone && 'order-1')}>
         {sequence.length > 0 ? (
-          <VideoStage />
+          <div className="relative flex min-h-0 flex-1 flex-col">
+            {phone ? (
+              <button type="button" onClick={() => setPreviewCollapsed((v) => !v)} title={previewCollapsed ? 'Show preview' : 'Collapse preview'} className="absolute right-0 top-0 z-50 inline-flex h-9 w-9 items-center justify-center gap-1 rounded-lg border border-line bg-elevated px-2 text-[11px] text-lo hover:text-hi sm:h-8 sm:w-auto" aria-label={previewCollapsed ? 'Show preview' : 'Collapse preview'} aria-expanded={!previewCollapsed}>
+                {previewCollapsed ? <ChevronDown size={13} /> : <ChevronUp size={13} />}
+                <span className="hidden sm:inline">{previewCollapsed ? 'Show preview' : 'Collapse preview'}</span>
+              </button>
+            ) : null}
+            <VideoStage previewCollapsed={previewCollapsed} />
+          </div>
         ) : (
           <SelectClipHint hasAssets={(project.videoAssets?.length ?? 0) > 0} />
         )}
@@ -226,6 +235,12 @@ function SelectClipHint({ hasAssets }: { hasAssets: boolean }): ReactNode {
       </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2 text-[10px] text-lo"><span className="rounded-full bg-elevated px-2.5 py-1">1 · Add clips</span><span className="rounded-full bg-elevated px-2.5 py-1">2 · Edit</span><span className="rounded-full bg-elevated px-2.5 py-1">3 · Export</span></div>
+      {hasAssets ? (
+        <button type="button" onClick={() => useVideoEditor.getState().createYouTubeMontage()} className="mt-1 inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-onaccent shadow-sm transition hover:brightness-110">
+          <WandSparkles size={15} /> Build a YouTube montage
+        </button>
+      ) : null}
+      {hasAssets ? <p className="max-w-md text-[11px] text-lo">Creates a 16:9, ~1-minute starter edit with 5-second cuts, dissolves, title, and music. Everything stays editable.</p> : null}
     </div>
   )
 }

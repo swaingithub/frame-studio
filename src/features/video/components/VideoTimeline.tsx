@@ -116,8 +116,11 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
   /** Keeps viewStart within its legal range (playhead time ∈ [0, total]). */
   const clampView = useCallback(
     (v: number): number => {
-      const half = viewportSec / 2
-      return Math.min(Math.max(v, -half), Math.max(-half, total - half))
+      // Never allow a negative timeline offset. When the whole sequence fits
+      // in the viewport, a negative start creates a misleading empty region
+      // before the first clip and makes Clip 1 appear to begin at 0:18.
+      const maxStart = Math.max(0, total - viewportSec)
+      return Math.min(Math.max(v, 0), maxStart)
     },
     [total, viewportSec],
   )
@@ -447,51 +450,51 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-1">
-      <div className="flex items-center justify-between px-0.5">
+      <div className="flex items-center justify-between px-0.5 max-[767px]:mt-1">
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-lo">Timeline</span>
         <span className="text-[10px] text-lo" aria-live="polite">
           {activeOverlayId !== null ? 'Overlay selected' : activeClipId !== null ? 'Clip selected' : 'Select a clip to edit'}
         </span>
       </div>
       {!IS_TOUCH ? null : (
-        <p className="truncate px-0.5 text-[10px] leading-tight text-lo" role="status">
+        <p className="truncate px-0.5 text-[10px] leading-tight text-lo max-[767px]:hidden" role="status">
           {hint}
         </p>
       )}
       {/* Clip operations toolbar — labeled on touch devices so beginners
           can read what each tool does (desktop relies on tooltips). */}
-      <div className="flex items-center gap-1">
+      <div className="flex flex-wrap items-center gap-1 max-[767px]:gap-2">
         <Tooltip content="Split the selected clip at the playhead (Scissors)">
           <button type="button" onClick={splitAtPlayhead} disabled={!canOperate} className={toolBtn} aria-label="Split clip at playhead">
             <Scissors size={12} />
-            <span className="fs-tool-label">Split</span>
+            <span className="hidden">Split</span>
           </button>
         </Tooltip>
         <Tooltip content="Move clip earlier">
           <button type="button" onClick={() => activeClipId && moveClip(activeClipId, -1)} disabled={!canOperate} className={toolBtn} aria-label="Move clip earlier">
             <ArrowLeft size={12} />
-            <span className="fs-tool-label">Earlier</span>
+            <span className="hidden">Earlier</span>
           </button>
         </Tooltip>
         <Tooltip content="Move clip later">
           <button type="button" onClick={() => activeClipId && moveClip(activeClipId, 1)} disabled={!canOperate} className={toolBtn} aria-label="Move clip later">
             <ArrowRight size={12} />
-            <span className="fs-tool-label">Later</span>
+            <span className="hidden">Later</span>
           </button>
         </Tooltip>
         <Tooltip content="Duplicate clip">
           <button type="button" onClick={() => activeClipId && duplicateClip(activeClipId)} disabled={!canOperate} className={toolBtn} aria-label="Duplicate clip">
             <Copy size={12} />
-            <span className="fs-tool-label">Copy</span>
+            <span className="hidden">Copy</span>
           </button>
         </Tooltip>
         <Tooltip content="Delete clip">
-          <button type="button" onClick={() => activeClipId && removeClip(activeClipId)} disabled={!canOperate} className={cn(toolBtn, 'text-danger')} aria-label="Delete clip">
+          <button type="button" onClick={() => activeClipId && removeClip(activeClipId)} disabled={!canOperate} className={cn(toolBtn, 'text-danger max-[767px]:ml-auto')} aria-label="Delete clip">
             <Trash2 size={12} />
-            <span className="fs-tool-label">Delete</span>
+            <span className="hidden">Delete</span>
           </button>
         </Tooltip>
-        <span className="ml-auto pr-1 text-[10px] tabular-nums text-lo" aria-label={`Playhead ${formatDuration(currentTime)} of ${formatDuration(total)}`}>
+        <span className="ml-auto pr-1 text-[10px] tabular-nums text-lo max-[767px]:basis-full max-[767px]:text-right" aria-label={`Playhead ${formatDuration(currentTime)} of ${formatDuration(total)}`}>
           {formatDuration(currentTime)} <span className="text-line">/</span> {formatDuration(total)}
         </span>
       </div>
@@ -611,7 +614,7 @@ function TimelineRuler({ total }: { total: number }): ReactNode {
 }
 
 const toolBtn =
-  'fs-tool-hit flex h-6 items-center justify-center gap-1 rounded-md px-1 text-hi/80 text-lo hover:bg-hover hover:text-hi disabled:opacity-30'
+  'fs-tool-hit flex h-6 items-center justify-center gap-1 rounded-md px-1 text-hi/80 text-lo hover:bg-hover hover:text-hi disabled:opacity-30 max-[767px]:h-10 max-[767px]:min-w-10 max-[767px]:px-2'
 
 /** Small thumbnail for a media layer's timeline chip. */
 function LaneThumb({ assetId }: { assetId?: string }): ReactNode {
@@ -902,9 +905,12 @@ const TimelineSegment = memo(function TimelineSegment({
       {selected && entry.clip.keyframes ? (
         <KeyframeDiamonds clip={entry.clip} out={entry.out} mobile={mobile} />
       ) : null}
-      <div className="absolute inset-x-1 top-0.5 flex items-center gap-1">
-        <span className="truncate text-[10px] font-medium text-hi" aria-hidden>
-          {asset?.name ?? 'Clip'}
+      <div className="absolute inset-x-1 top-0.5 z-40 flex items-center gap-1 rounded bg-black/35 px-1">
+        <span className="hidden truncate text-[10px] font-medium text-hi sm:inline" aria-hidden>
+          {asset?.name ?? `Clip ${index + 1}`}
+        </span>
+        <span className="truncate text-[10px] font-medium text-hi sm:hidden" aria-hidden>
+          {`Clip ${index + 1}`}
         </span>
         {entry.clip.title ? <Type size={9} className="shrink-0 text-hi/80" aria-hidden /> : null}
         <span className="ml-auto shrink-0 text-[9px] tabular-nums text-hi/70" aria-hidden>

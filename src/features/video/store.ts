@@ -45,6 +45,7 @@ import { PRESETS, mixValues, filmicCurve } from '../../core/adjustments/presets'
 import { animAt, moveKeyframeTime, ANIM_DEFAULTS, type AnimBase, type Keyframe, type KeyframeSet, type SpeedCurve } from './sequenceAnim'
 import { STICKER_DEFAULT_SCALE } from './stickers'
 import { CAPTION_BASE, type CaptionSegment } from './captions'
+import { MUSIC_LIBRARY } from './musicLibrary'
 import type { ChromaKey, Mask } from '../../core/adjustments/edits'
 
 /**
@@ -103,6 +104,8 @@ interface VideoState {
   ensureSequence: () => void
   setActiveClip: (clipId: string | null) => void
   addClip: (assetId: string) => void
+  /** Builds a polished, editable YouTube-style montage from project videos. */
+  createYouTubeMontage: () => void
   setAssetDuration: (assetId: string, duration: number) => void
 
   setAdjustment: (key: keyof VideoEditDoc['adjustments'], value: number) => void
@@ -398,6 +401,43 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       recordHistory('Add clip', before, snap({ clips: next }))
       set({ sequence: next, activeClipId: clip.id, clip, doc: blank, revision: get().revision + 1 })
       persist(next, get().music, clip.id)
+    },
+
+    createYouTubeMontage: () => {
+      const project = useProjectsStore.getState().projects.find((p) => p.id === useProjectsStore.getState().currentId)
+      const ids = [...new Set(project?.videoAssets ?? [])]
+      if (ids.length === 0) {
+        toast('Add a video first', 'Import at least one video into this project to build a montage.', 'info')
+        return
+      }
+      const before = snap()
+      const clips: VideoClip[] = []
+      // Twelve 5-second beats gives a familiar ~1-minute YouTube montage.
+      for (let i = 0; i < 12; i++) {
+        const assetId = ids[i % ids.length]
+        const duration = Math.max(0.5, get().durations[assetId] ?? 5)
+        const out = Math.min(5, duration)
+        clips.push({
+          id: newClipId(assetId),
+          assetId,
+          edit: { ...defaultVideoEdit(), trimStart: 0, trimEnd: out },
+          transition: i === 0 ? 'cut' : 'dissolve',
+          transitionDuration: i === 0 ? DEFAULT_TRANSITION : 0.45,
+          title: null,
+        })
+      }
+      const title: OverlayClip = {
+        id: newClipId('text'), kind: 'text', text: 'MY STORY IN 60 SECONDS', start: 0.35, duration: 3.5,
+        base: { ...animAt(undefined, 0, ANIM_DEFAULTS), scale: 1.15 },
+        keyframes: { scale: [], x: [], y: [], opacity: [] },
+      }
+      const nextMusic = MUSIC_LIBRARY.tracks[0] ? { assetId: MUSIC_LIBRARY.tracks[0].id, volume: 32 } : null
+      const canvas = { ...get().canvas, aspect: '16:9' as const, quality: 1080 }
+      const active = clips[0]
+      recordHistory('Build YouTube montage', before, snap({ clips, overlays: [title], music: nextMusic, canvas }))
+      set({ sequence: clips, overlays: [title], music: nextMusic, canvas, activeClipId: active.id, activeOverlayId: null, clip: active, doc: active.edit, currentTime: 0, revision: get().revision + 1 })
+      persist(clips, nextMusic, active.id, [title], canvas)
+      toast('YouTube montage ready', 'Your 16:9 edit has clips, dissolves, a title, and music. Fine-tune it on the timeline.', 'success')
     },
 
     setAssetDuration: (assetId, duration) => {

@@ -52,7 +52,7 @@ const PRELOAD_LEAD_S = 2.0
 type Slot = 'A' | 'B'
 const other = (slot: Slot): Slot => (slot === 'A' ? 'B' : 'A')
 
-export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null) => void }): ReactNode {
+export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistogram?: (h: Histogram | null) => void; previewCollapsed?: boolean }): ReactNode {
   const project = useCurrentProject()
   const assets = useAssets()
 
@@ -1115,7 +1115,8 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
     // load the first clip before setting `playing`. Resetting only the store
     // time can leave the last HTMLMediaElement in its ended state while the
     // sequence is asynchronously switching back to clip one.
-    if (globalT.current >= (ctrlLayout.current.total - 0.05)) {
+    const sequenceEnded = globalT.current >= (ctrlLayout.current.total - 0.05) || st.currentTime >= (ctrlLayout.current.total - 0.05)
+    if (sequenceEnded) {
       const first = ctrlLayout.current.entries[0]
       if (first) {
         const firstSrc = clipSrcAt(first.clip, 0, ctrlDurations.current[first.clip.assetId] ?? 0)
@@ -1315,8 +1316,8 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
   }
 
   return (
-    <div ref={containerRef} className="relative flex h-full min-h-0 w-full flex-col p-2 sm:p-4">
-      <div ref={stageAreaRef} className="relative flex min-h-0 w-full flex-1 items-center justify-center">
+    <div ref={containerRef} className="relative flex h-full min-h-0 w-full flex-col p-2 sm:p-4 max-[767px]:p-0">
+      <div ref={stageAreaRef} className={cn('relative order-2 flex min-h-0 w-full flex-1 items-center justify-center max-[767px]:order-2', previewCollapsed && 'max-[767px]:hidden')}>
         <div style={{ width: size.w || undefined, height: size.h || undefined }} className="relative min-h-0">
           {/* Width/height are managed imperatively in the render loop (they
               change per-frame with the camera crop). Binding them here makes
@@ -1395,7 +1396,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
       })}
 
       {/* Stage controls (in flow so they never cover the timeline on phones) */}
-      <div className="z-30 mt-2 flex w-full max-w-3xl items-center justify-end gap-1 self-center sm:mt-3">
+      <div className="z-30 order-4 mt-2 flex w-full max-w-3xl items-center justify-end gap-1 self-center sm:mt-3 max-[767px]:hidden">
         {fallback ? (
           <Tooltip content="WebGL2 unavailable — Canvas 2D fallback (color approximate).">
             <Button size="icon" variant="ghost" aria-label="Renderer info">
@@ -1411,7 +1412,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
           onPointerDown={() => useVideoEditor.getState().setBypass(true)}
           onPointerUp={() => useVideoEditor.getState().setBypass(false)}
           onPointerLeave={() => useVideoEditor.getState().setBypass(false)}
-          className={cn('fs-tool-hit', bypass ? 'ring-1 ring-accent' : undefined)}
+          className={cn('fs-tool-hit max-[767px]:!h-9 max-[767px]:!w-9 max-[767px]:p-0', bypass ? 'ring-1 ring-accent' : undefined)}
         >
           <Eye size={13} />
           <span className="hidden sm:inline">Compare</span>
@@ -1423,16 +1424,16 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
           aria-pressed={showSafeZones}
           title="Show where Reels/TikTok/Shorts UI covers the frame"
           onClick={() => setShowSafeZones((v) => !v)}
-          className={cn('fs-tool-hit', showSafeZones && 'ring-1 ring-accent')}
+          className={cn('fs-tool-hit max-[767px]:!h-9 max-[767px]:!w-9 max-[767px]:p-0', showSafeZones && 'ring-1 ring-accent')}
         >
           <ShieldQuestion size={13} />
           <span className="hidden sm:inline">Safe zones</span>
         </Button>
-        <Button size="sm" variant="subtle" aria-label="Save cover frame" title="Save the current frame as a cover image (JPEG)" onClick={() => void saveCoverFrame()}>
+        <Button size="sm" variant="subtle" aria-label="Save cover frame" title="Save the current frame as a cover image (JPEG)" onClick={() => void saveCoverFrame()} className="fs-tool-hit max-[767px]:!h-9 max-[767px]:!w-9 max-[767px]:p-0">
           <Camera size={13} />
           <span className="hidden sm:inline">Cover</span>
         </Button>
-        <Button size="sm" variant="primary" onClick={() => void startExport()} disabled={recording !== null} className="fs-tool-hit">
+        <Button size="sm" variant="primary" onClick={() => void startExport()} disabled={recording !== null} className="fs-tool-hit max-[767px]:!h-9 max-[767px]:px-3">
           <Download size={13} />
           <span className="sm:hidden">Export</span>
           <span className="hidden sm:inline">Export video</span>
@@ -1440,7 +1441,7 @@ export function VideoStage({ onHistogram }: { onHistogram?: (h: Histogram | null
       </div>
 
       {/* Playback + sequence timeline */}
-      <div className="z-20 mt-2 w-full max-w-3xl self-center sm:mt-3">
+      <div className="z-20 order-3 mt-2 w-full max-w-3xl self-center sm:mt-3 max-[767px]:mt-2">
         {recording ? (
           <div className="mb-2 rounded-md bg-accent-soft px-3 py-1.5 text-[11px] text-accent" role="status">
             Recording {recording.done.toFixed(1)}s / {recording.total.toFixed(1)}s — export plays the sequence once…
