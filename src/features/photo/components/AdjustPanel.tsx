@@ -40,9 +40,10 @@ interface AdjustPanelProps {
   doc: EditDoc | null
   histogram: Histogram | null
   unedited: boolean
+  simpleMode?: boolean
 }
 
-export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): ReactNode {
+export function AdjustPanel({ doc, histogram, unedited, simpleMode = true }: AdjustPanelProps): ReactNode {
   const editor = usePhotoEditor()
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const stats = histogram ? statsFromHistogram(histogram.l, histogram.samples) : null
@@ -107,17 +108,8 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
         )
       })}
 
-      <CurveSection
-        curve={doc.curves ?? defaultToneCurve()}
-        collapsed={collapsed.curve === true}
-        onToggle={() => setCollapsed((c) => ({ ...c, curve: !c.curve }))}
-      />
-
-      <HslPanel
-        mixer={doc.hsl ?? defaultHslMixer()}
-        collapsed={collapsed.hsl === true}
-        onToggle={() => setCollapsed((c) => ({ ...c, hsl: !c.hsl }))}
-      />
+      {!simpleMode ? <CurveSection curve={doc.curves ?? defaultToneCurve()} collapsed={collapsed.curve === true} onToggle={() => setCollapsed((c) => ({ ...c, curve: !c.curve }))} /> : null}
+      {!simpleMode ? <HslPanel mixer={doc.hsl ?? defaultHslMixer()} collapsed={collapsed.hsl === true} onToggle={() => setCollapsed((c) => ({ ...c, hsl: !c.hsl }))} /> : null}
 
       {/* Geometry */}
       <section>
@@ -173,10 +165,10 @@ export function AdjustPanel({ doc, histogram, unedited }: AdjustPanelProps): Rea
       </section>
 
       {/* Batch: share this photo's grade with every other photo in the project */}
-      <BatchSection unedited={unedited} />
+      {!simpleMode ? <BatchSection unedited={unedited} /> : null}
 
       {/* Shape mask: grade only inside/outside a shape */}
-      <MaskSection />
+      {!simpleMode ? <MaskSection /> : null}
 
       {/* Text layers: draggable captions on the photo */}
       <TextOverlaySection />

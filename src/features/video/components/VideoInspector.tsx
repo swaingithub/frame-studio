@@ -84,7 +84,7 @@ function ModeToggle(): ReactNode {
   )
 }
 
-export function VideoInspectorBody({ histogram }: { histogram: Histogram | null }): ReactNode {
+export function VideoInspectorBody({ histogram, simpleMode = true }: { histogram: Histogram | null; simpleMode?: boolean }): ReactNode {
   const doc = useVideoEditor((s) => s.doc)
   const clip = useVideoEditor((s) => s.clip)
   const proMode = useVideoEditor((s) => s.proMode)
@@ -159,13 +159,13 @@ export function VideoInspectorBody({ histogram }: { histogram: Histogram | null 
 
       <SpeedControls doc={doc} />
 
-      {proMode ? <RampControls doc={doc} /> : null}
+      {!simpleMode && proMode ? <RampControls doc={doc} /> : null}
 
-      {proMode ? <CameraControls clip={clip} /> : null}
+      {!simpleMode && proMode ? <CameraControls clip={clip} /> : null}
 
-      {proMode ? <ChromaKeyControls /> : null}
+      {!simpleMode && proMode ? <ChromaKeyControls /> : null}
 
-      {proMode ? <MaskControls /> : null}
+      {!simpleMode && proMode ? <MaskControls /> : null}
 
       <BgRemoveControls />
 
