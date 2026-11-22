@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Frame Studio — a local-first, privacy-first photo & video editor that runs entirely in your browser.",
+  "license": "MIT",
   "engines": {
     "node": ">=20"
   },

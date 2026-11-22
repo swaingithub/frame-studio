@@ -243,3 +243,10 @@ Phase 6) opt-in downloads for AI models, clearly labelled before download.
   `useLiveQuery` keeps components reactive without duplicating state.
 - Object URLs are always revoked (`useObjectUrl`), textures/URLs capped —
   memory hygiene utilities land with the Phase 2 render pipeline.
+
+## License
+
+MIT — see [LICENSE](./LICENSE). The app is free to use and modify.
+
+The bundled music library is **CC0 1.0** (no attribution needed) — details in
+[`public/music/LICENSE.txt`](./public/music/LICENSE.txt).
