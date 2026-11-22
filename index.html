@@ -17,12 +17,17 @@
       scripts are the user-opt-in AI model downloads (MediaPipe WASM +
       selfie-segmenter model from Google Cloud Storage, Whisper/Kokoro models
       from Hugging Face — never automatic, never silent).
-      'unsafe-inline' covers Vite's injected dev scripts and the app's inline
-      styles; 'wasm-unsafe-eval' is required by ONNX Runtime / MediaPipe WASM.
+      script-src: 'self' plus the opt-in jsDelivr (Kokoro WASM bundles) and
+      the React Refresh inline script, allowed via its sha256 hash in dev
+      (the prod shell has no inline scripts); 'wasm-unsafe-eval' is required
+      by ONNX Runtime / MediaPipe WASM. style-src keeps 'unsafe-inline' for
+      the pre-hydration paint <style> and dynamic styles. The same policy is
+      served as a real header by vercel.json / _headers on Vercel; this meta
+      is the fallback for hosts that can't set headers.
     -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net; worker-src 'self' blob:; connect-src 'self' blob: data: https://cdn.jsdelivr.net https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://storage.googleapis.com; img-src 'self' data: blob:; media-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'"
+      content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' blob: https://cdn.jsdelivr.net 'sha256-Z2/iFzh9VMlVkEOar1f/oSHWwQk3ve1qk/C2WdsC4Xk='; worker-src 'self' blob:; connect-src 'self' blob: data: https://cdn.jsdelivr.net https://huggingface.co https://*.hf.co https://cdn-lfs.huggingface.co https://storage.googleapis.com; img-src 'self' data: blob:; media-src 'self' blob: data:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'"
     />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
     <title>Frame Studio</title>

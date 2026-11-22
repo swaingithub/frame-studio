@@ -17,7 +17,7 @@ test('CSP meta is present and blocks nothing the shell needs', async ({ page }) 
   page.on('pageerror', (err) => errors.push(err.message))
   await page.goto('/')
   const csp = page.locator('meta[http-equiv="Content-Security-Policy"]')
-  await expect(csp).toHaveAttribute('content', /script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'/)
+  await expect(csp).toHaveAttribute('content', /script-src 'self' 'wasm-unsafe-eval' blob: https:\/\/cdn\.jsdelivr\.net 'sha256-[^']+'/)
   await page.waitForTimeout(2_000)
   // CSP violations surface as page errors (blocked script) — none expected.
   expect(errors).toEqual([])
