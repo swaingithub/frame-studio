@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     target: 'es2022',
-    sourcemap: true,
+    // 'hidden': maps are generated (server-side, for debugging) but the
+    // bundles carry no `sourceMappingURL` comments, so they aren't fetched
+    // by browsers.
+    sourcemap: 'hidden',
     rollupOptions: {
       output: {
         // Split the two editors into their own chunks — they're the bulk of
