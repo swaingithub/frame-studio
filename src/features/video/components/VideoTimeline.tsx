@@ -1,10 +1,10 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowLeft, ArrowRight, Copy, Scissors, Square, Sun, Trash2, Blend, Type, Move, Circle, ZoomIn, Droplets, RotateCw, Zap, Columns2 } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Copy, Scissors, Square, Sun, Trash2, Blend, Type, Move, Circle, ZoomIn, Droplets, RotateCw, Zap, Columns2, Speaker, X } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { formatDuration } from '../../../core/format'
 import { useVideoEditor, layoutOf } from '../store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
-import { TRANSITION_LABELS, type OverlayClip, type VideoClip, type VideoTransition } from '../sequenceModel'
+import { TRANSITION_LABELS, type OverlayClip, type VoiceoverClip, type VideoClip, type VideoTransition } from '../sequenceModel'
 import type { MediaAsset } from '../../../core/db/schema'
 import { Tooltip } from '../../../ui/tooltip'
 import { OverlayLaneRow } from './OverlayLaneRow'
@@ -28,6 +28,8 @@ const IS_TOUCH =
 
 export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): ReactNode {
   const clips = useVideoEditor((s) => s.sequence)
+  const voiceovers = useVideoEditor((s) => s.voiceovers)
+  const removeVoiceover = useVideoEditor((s) => s.removeVoiceover)
   const overlays = useVideoEditor((s) => s.overlays)
   const activeOverlayId = useVideoEditor((s) => s.activeOverlayId)
   const setActiveOverlay = useVideoEditor((s) => s.setActiveOverlay)
@@ -559,6 +561,14 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         ) : null}
       </div>
 
+      {/* Voiceover track: Kokoro TTS clips (plays during export). */}
+      <VoiceoverRow
+        voiceovers={voiceovers}
+        total={total}
+        assets={assets ?? []}
+        onRemove={removeVoiceover}
+      />
+
       {/* Overlay track lanes: text layers share one lane; every media layer
           gets its own stacked lane (multi-track, CapCut-style). */}
       {textOverlays.length > 0 ? (
@@ -600,6 +610,60 @@ export function VideoTimeline({ onSeek }: { onSeek: (t: number) => void }): Reac
         />
       ))}
       </div>
+    </div>
+  )
+}
+
+/** Voiceover track row: Kokoro TTS clips positioned by start/duration. */
+function VoiceoverRow({
+  voiceovers,
+  total,
+  assets,
+  onRemove,
+}: {
+  voiceovers: VoiceoverClip[]
+  total: number
+  assets: MediaAsset[]
+  onRemove: (id: string) => void
+}): ReactNode {
+  const pos = (seconds: number, span: number): string =>
+    `${Math.max(0, Math.min(100, (seconds / Math.max(0.001, span)) * 100))}%`
+  return (
+    <div className="relative h-9 min-w-0 rounded-md bg-elevated" aria-label="Voiceover track">
+      <div className="absolute inset-y-0 left-0 w-[88%] rounded-sm bg-stage" aria-hidden />
+      <span className="pointer-events-none absolute left-1.5 top-0.5 text-[9px] font-semibold uppercase tracking-wide text-lo" aria-hidden>
+        VO
+      </span>
+      {voiceovers.map((v) => {
+        const asset = assets.find((a) => a.id === v.assetId) ?? null
+        const name = asset?.name ?? 'Voiceover'
+        return (
+          <div
+            key={v.id}
+            role="group"
+            aria-label={`Voiceover: ${name}`}
+            className="absolute inset-y-0 flex items-center gap-1.5 rounded-sm border border-line bg-panel px-1.5 shadow-sm"
+            style={{
+              left: pos(v.start, total),
+              width: `${Math.max(6, Math.min(100, (v.duration / Math.max(0.001, total)) * 100))}%`,
+            }}
+          >
+            <Speaker size={11} className="shrink-0 text-accent" aria-hidden />
+            <span className="min-w-0 flex-1 truncate text-[10px] text-hi" title={name}>
+              {name}
+            </span>
+            <span className="shrink-0 tabular-nums text-[9px] text-lo">{formatDuration(v.duration)}</span>
+            <button
+              type="button"
+              aria-label={`Remove voiceover ${name}`}
+              className="fs-tool-hit rounded p-0.5 text-lo hover:bg-hover hover:text-danger"
+              onClick={() => onRemove(v.id)}
+            >
+              <X size={10} />
+            </button>
+          </div>
+        )
+      })}
     </div>
   )
 }

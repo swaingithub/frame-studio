@@ -316,11 +316,55 @@ export interface VideoSequence {
   /** Overlay layers (top of the stack = last in the array). */
   overlays: OverlayClip[]
   music: MusicTrack | null
+  /** Voiceover track (Kokoro TTS) — plays during export. */
+  voiceovers: VoiceoverClip[]
   /** Output frame + letterbox fill for the whole project. */
   canvas: CanvasSettings
   /** Marks a sequence that came from the legacy per-asset model. A legacy
    *  sequence that lost all its clips is re-migrated on the next load. */
   fromLegacy?: boolean
+}
+
+/** One generated voiceover clip (Kokoro TTS): a library audio asset on the timeline. */
+export interface VoiceoverClip {
+  id: string
+  /** Library asset id of the generated WAV voiceover. */
+  assetId: string
+  /** Position in sequence seconds (when appended at the timeline end). */
+  start: number
+  /** Duration in sequence seconds. */
+  duration: number
+}
+
+export const DEFAULT_VOICEOVER_DURATION = 0.5
+
+export function defaultVoiceovers(): VoiceoverClip[] {
+  return []
+}
+
+/** Repairs a voiceover from storage. Returns null for garbage. */
+export function sanitizeVoiceoverClip(raw: unknown): VoiceoverClip | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const rec = raw as Record<string, unknown>
+  const id = typeof rec.id === 'string' && rec.id ? rec.id.slice(0, 40) : ''
+  const assetId = typeof rec.assetId === 'string' ? rec.assetId : ''
+  if (!id || !assetId) return null
+  const start = typeof rec.start === 'number' && Number.isFinite(rec.start) ? Math.max(0, rec.start) : 0
+  const duration =
+    typeof rec.duration === 'number' && Number.isFinite(rec.duration)
+      ? Math.max(DEFAULT_VOICEOVER_DURATION, rec.duration)
+      : DEFAULT_VOICEOVER_DURATION
+  return { id, assetId, start, duration }
+}
+
+export function sanitizeVoiceovers(raw: unknown): VoiceoverClip[] {
+  if (!Array.isArray(raw)) return []
+  const out: VoiceoverClip[] = []
+  for (const item of raw.slice(0, 32)) {
+    const v = sanitizeVoiceoverClip(item)
+    if (v) out.push(v)
+  }
+  return out
 }
 
 export const MIN_CLIP_OUT = 0.2
@@ -758,7 +802,7 @@ export function overlayVisual(o: OverlayClip, t: number, w: number, h: number): 
 
 /** Repairs a sequence read from storage. Clips referencing unknown assets are dropped. */
 export function sanitizeSequence(raw: unknown, durationOf: DurationLookup, hasAsset: (id: string) => boolean): VideoSequence {
-  const empty: VideoSequence = { clips: [], overlays: [], music: null, canvas: defaultCanvasSettings() }
+  const empty: VideoSequence = { clips: [], overlays: [], music: null, voiceovers: [], canvas: defaultCanvasSettings() }
   if (typeof raw !== 'object' || raw === null) return empty
   const rec = raw as Record<string, unknown>
   const list = Array.isArray(rec.clips) ? rec.clips : []
@@ -793,6 +837,7 @@ export function sanitizeSequence(raw: unknown, durationOf: DurationLookup, hasAs
     clips,
     overlays,
     music: sanitizeMusic(rec.music, hasAsset),
+    voiceovers: sanitizeVoiceovers(rec.voiceovers),
     canvas: sanitizeCanvas(rec.canvas),
     ...(fromLegacy ? { fromLegacy: true } : {}),
   }
@@ -816,7 +861,7 @@ export function migrateLegacySequence(
       transitionDuration: DEFAULT_TRANSITION,
       title: null,
     }))
-  return { clips, overlays: [], music: null, canvas: defaultCanvasSettings(), fromLegacy: true }
+  return { clips, overlays: [], music: null, voiceovers: [], canvas: defaultCanvasSettings(), fromLegacy: true }
 }
 
 /**

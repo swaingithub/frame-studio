@@ -15,6 +15,7 @@ import {
   sanitizeCanvas,
   sanitizeSequence,
   sanitizeTitle,
+  sanitizeVoiceovers,
   splitClipAt,
   syncCutsToBeats,
   TRANSITION_LABELS,
@@ -226,7 +227,30 @@ describe('sanitizeSequence', () => {
   const hasAsset = (id: string): boolean => id === 'asset_a' || id === 'asset_b'
 
   it('returns an empty sequence for garbage', () => {
-    expect(sanitizeSequence(null, durationOf, hasAsset)).toEqual({ clips: [], overlays: [], music: null, canvas: defaultCanvasSettings() })
+    expect(sanitizeSequence(null, durationOf, hasAsset)).toEqual({
+      clips: [],
+      overlays: [],
+      music: null,
+      voiceovers: [],
+      canvas: defaultCanvasSettings(),
+    })
+  })
+
+  it('sanitizes voiceovers (clamps, drops garbage, caps the list)', () => {
+    expect(
+      sanitizeVoiceovers([
+        { id: 'v1', assetId: 'asset_a', start: -2, duration: 0 },
+        { id: '', assetId: 'asset_a', start: 1, duration: 2 },
+        { id: 'v2', assetId: '', start: 1, duration: 2 },
+        { id: 'v3', assetId: 'asset_a', start: 3, duration: 1.5 },
+      ]),
+    ).toEqual([
+      { id: 'v1', assetId: 'asset_a', start: 0, duration: 0.5 },
+      { id: 'v3', assetId: 'asset_a', start: 3, duration: 1.5 },
+    ])
+    expect(
+      sanitizeVoiceovers(Array.from({ length: 40 }, (_, i) => ({ id: `v_${i}`, assetId: 'asset_a', start: 0, duration: 1 }))).length,
+    ).toBe(32)
   })
 
   it('sanitizes canvas settings and computes fixed output sizes', () => {

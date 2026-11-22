@@ -57,6 +57,7 @@ export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistog
   const assets = useAssets()
 
   const clips = useVideoEditor((s) => s.sequence)
+  const voiceovers = useVideoEditor((s) => s.voiceovers)
   const overlays = useVideoEditor((s) => s.overlays)
   const music = useVideoEditor((s) => s.music)
   const durations = useVideoEditor((s) => s.durations)
@@ -79,6 +80,8 @@ export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistog
   const videoARef = useRef<HTMLVideoElement>(null)
   const videoBRef = useRef<HTMLVideoElement>(null)
   const musicRef = useRef<HTMLAudioElement>(null)
+  /** Hidden <audio> elements for voiceover clips (Kokoro TTS) — used at export. */
+  const voiceoverElsRef = useRef(new Map<string, HTMLAudioElement>())
 
   const [box, setBox] = useState({ w: 0, h: 0 })
   const [outDims, setOutDims] = useState({ w: 0, h: 0 })
@@ -992,6 +995,25 @@ export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistog
   const ctrlDurations = useRef(durations)
   ctrlDurations.current = durations
 
+  // Voiceover elements: one hidden <audio> per timeline voiceover, sourced
+  // from the generated WAV in the library. During export they are mixed in.
+  useEffect(() => {
+    for (const v of voiceovers) {
+      if (voiceoverElsRef.current.has(v.id)) continue
+      const el = document.createElement('audio')
+      el.preload = 'auto'
+      const asset = assetMap.get(v.assetId)
+      if (asset) {
+        void getAssetUrl(asset.id)
+          .then((url) => {
+            if (el === voiceoverElsRef.current.get(v.id)) el.src = url
+          })
+          .catch(() => undefined)
+      }
+      voiceoverElsRef.current.set(v.id, el)
+    }
+  }, [voiceovers, assetMap, getAssetUrl])
+
   // Music element source: assign the cached blob URL reactively.
   const musicAssetId = music?.assetId ?? null
   const musicAsset = musicAssetId ? assetMap.get(musicAssetId) ?? null : null
@@ -1187,6 +1209,9 @@ export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistog
     const started = useVideoEditor.getState()
     started.setPlaying(false)
     seekTo(0)
+    const voiceoverEls = [...voiceoverElsRef.current.values()]
+    // Voiceovers (Kokoro TTS): play over the export.
+    for (const el of voiceoverEls) el.play().catch(() => undefined)
     const audioElements = [
       videoARef.current,
       videoBRef.current,
@@ -1196,6 +1221,8 @@ export function VideoStage({ onHistogram, previewCollapsed = false }: { onHistog
         .filter((o) => o.kind === 'video' && o.muted !== true)
         .map((o) => overlayEls.current.get(o.id))
         .filter((el): el is HTMLVideoElement => el instanceof HTMLVideoElement),
+      // Kokoro voiceovers.
+      ...voiceoverEls,
     ].filter((el): el is HTMLMediaElement => el !== null && el !== undefined)
     const run = (): Promise<void> =>
       new Promise<void>((resolve) => {

@@ -6,6 +6,7 @@ import { renderEdit } from '../../core/render/pipeline'
 import { newId } from '../../core/id'
 import { type EditDoc } from '../../core/adjustments/edits'
 import { drawPhotoOverlays } from './overlayDraw'
+import { segmentImageBitmap } from '../video/bgRemove'
 
 /**
  * Full-resolution export. Renders source + EditDoc into a fresh canvas at
@@ -66,8 +67,17 @@ export function sanitizeFileName(name: string): string {
   return name.replace(/\.[a-z0-9]+$/i, '').replace(/[\\/:*?"<>|]+/g, '_')
 }
 
-/** Renders one photo to a Blob (no download). Throws on failure. */
+/**
+ * Renders one photo to a Blob (no download). Throws on failure.
+ * Background removal produces a transparent (alpha) PNG — JPEG cannot hold
+ * alpha, so the format is upgraded to PNG while it is on.
+ */
 export async function renderPhotoBlob(source: TexSource, doc: EditDoc, options: ExportOptions): Promise<ExportResult> {
+  const bgEnabled = doc.backgroundRemoval?.enabled === true
+  const bgMask =
+    bgEnabled && source instanceof ImageBitmap ? await segmentImageBitmap(source).catch(() => null) : null
+  const format: ExportFormat = bgEnabled ? 'image/png' : options.format
+
   const { w: baseW, h: baseH } = { w: sourceWidth(source), h: sourceHeight(source) }
   const plan = planForDoc(baseW, baseH, doc)
   let outW = plan.outW
@@ -95,7 +105,7 @@ export async function renderPhotoBlob(source: TexSource, doc: EditDoc, options: 
     // Render through the shared pipeline so the export matches the preview
     // exactly (curves, HSL, chroma key, shape masks) — never re-implement.
     if (useGL) {
-      renderEdit(source, doc, canvas, options.maxEdge !== null ? { maxSize: options.maxEdge } : {})
+      renderEdit(source, doc, canvas, { maxSize: options.maxEdge ?? undefined, bgMask })
     } else {
       draw2dFallback(canvas, source, {
         matrix: plan.matrix,
@@ -103,6 +113,16 @@ export async function renderPhotoBlob(source: TexSource, doc: EditDoc, options: 
         outH,
         adjustments: { ...defaultAdjustments(), ...doc.adjustments },
       })
+      // The 2D fallback always paints opaque; clip to the mask so the
+      // background-removed export is transparent (PNG keeps alpha).
+      if (bgMask) {
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+          ctx.globalCompositeOperation = 'destination-in'
+          ctx.drawImage(bgMask, 0, 0, canvas.width, canvas.height)
+          ctx.globalCompositeOperation = 'source-over'
+        }
+      }
     }
 
     // Text layers composite on top, same geometry as the live preview.
@@ -112,10 +132,10 @@ export async function renderPhotoBlob(source: TexSource, doc: EditDoc, options: 
       if (ctx) drawPhotoOverlays(ctx, overlays, canvas.width, canvas.height)
     }
 
-    const blob = await toBlob(canvas, options)
+    const blob = await toBlob(canvas, { ...options, format })
     if (!blob) throw new Error('Encoding produced no data')
 
-    const name = `${sanitizeFileName(options.baseName)}-edited-${outW}x${outH}-${newId('').slice(0, 8)}.${EXT[options.format]}`
+    const name = `${sanitizeFileName(options.baseName)}-edited-${outW}x${outH}-${newId('').slice(0, 8)}.${EXT[format]}`
     return { name, blob }
   } finally {
     canvas.width = 0

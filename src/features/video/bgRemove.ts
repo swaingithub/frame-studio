@@ -76,30 +76,12 @@ const maskCanvas = typeof document !== 'undefined' ? document.createElement('can
 let maskCtx: CanvasRenderingContext2D | null = null
 
 /**
- * Segments `video`'s current frame and paints the subject as WHITE with
- * alpha = confidence into the shared mask canvas (256×256 — the shader
- * samples by UV, so low resolution is fine and keeps per-frame cost tiny).
- * Returns the mask canvas, or null when segmentation is unavailable yet.
+ * Paints one confidence mask (alpha = subject confidence) into the shared
+ * mask canvas (256×256 — the shader samples by UV, so low resolution is fine
+ * and keeps per-frame cost tiny). Returns the mask canvas.
  */
-export function segmentSubjectMask(video: HTMLVideoElement): HTMLCanvasElement | null {
-  if (!segmenter || !maskCanvas) return null
-  let result: ImageSegmenterResult | null = null
-  try {
-    result = segmenter.segment(video)
-  } catch {
-    return null
-  }
-  const masks = result?.confidenceMasks
-  if (!masks || masks.length === 0) {
-    result?.close()
-    return null
-  }
-  // The selfie model's last confidence mask is the foreground subject.
-  const mask = masks[masks.length - 1]
-  const data = mask.getAsFloat32Array()
-  const w = mask.width
-  const h = mask.height
-  result.close()
+function paintConfidenceMask(data: Float32Array, w: number, h: number): HTMLCanvasElement | null {
+  if (!maskCanvas) return null
   if (maskCanvas.width !== w || maskCanvas.height !== h) {
     maskCanvas.width = w
     maskCanvas.height = h
@@ -117,4 +99,57 @@ export function segmentSubjectMask(video: HTMLVideoElement): HTMLCanvasElement |
   }
   ctx.putImageData(image, 0, 0)
   return maskCanvas
+}
+
+/**
+ * Segments `video`'s current frame and paints the subject as WHITE with
+ * alpha = confidence into the shared mask canvas.
+ * Returns the mask canvas, or null when segmentation is unavailable yet.
+ */
+export function segmentSubjectMask(video: HTMLVideoElement): HTMLCanvasElement | null {
+  if (!segmenter) return null
+  let result: ImageSegmenterResult | null = null
+  try {
+    result = segmenter.segment(video)
+  } catch {
+    return null
+  }
+  const masks = result?.confidenceMasks
+  if (!masks || masks.length === 0) {
+    result?.close()
+    return null
+  }
+  // The selfie model's last confidence mask is the foreground subject.
+  const mask = masks[masks.length - 1]
+  const data = mask.getAsFloat32Array()
+  const w = mask.width
+  const h = mask.height
+  result.close()
+  return paintConfidenceMask(data, w, h)
+}
+
+/**
+ * Same as segmentSubjectMask, but for a photo: runs the segmenter on the
+ * bitmap directly (IMAGE running mode). Awaits the segmenter so the first
+ * call after a model download reports progress through the UI.
+ */
+export async function segmentImageBitmap(bitmap: ImageBitmap): Promise<HTMLCanvasElement | null> {
+  const seg = await ensureSegmenter()
+  let result: ImageSegmenterResult | null = null
+  try {
+    result = seg.segment(bitmap)
+  } catch {
+    return null
+  }
+  const masks = result?.confidenceMasks
+  if (!masks || masks.length === 0) {
+    result?.close()
+    return null
+  }
+  const mask = masks[masks.length - 1]
+  const data = mask.getAsFloat32Array()
+  const w = mask.width
+  const h = mask.height
+  result.close()
+  return paintConfidenceMask(data, w, h)
 }

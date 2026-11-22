@@ -10,6 +10,7 @@ import { usePhotoEditor } from '../store'
 import { Button } from '../../../ui/button'
 import { Tooltip } from '../../../ui/tooltip'
 import { cn } from '../../../lib/cn'
+import { segmentImageBitmap } from '../../video/bgRemove'
 import type { MediaAsset } from '../../../core/db/schema'
 
 /**
@@ -148,6 +149,8 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
   const lastHistAt = useRef(0)
 
   const [source, setSource] = useState<SourceEntry | null>(null)
+  /** AI bg-removal mask for the current source; null while loading. */
+  const [bgMask, setBgMask] = useState<HTMLCanvasElement | null>(null)
   const [box, setBox] = useState({ w: 0, h: 0 })
   const [outDims, setOutDims] = useState({ w: 0, h: 0 })
   const [fallback, setFallback] = useState(false)
@@ -193,6 +196,24 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
     [doc, bypass],
   )
   const geometryOnly = cropMode !== null
+  const bgRemovalOn = effectiveDoc.backgroundRemoval?.enabled === true
+
+  // Segment the current source when background removal is on: the segmenter
+  // is awaited (downloads once, then cached) and the mask lands in bgMask,
+  // re-rendering the preview with alpha through the shared GL pipeline.
+  useEffect(() => {
+    setBgMask(null)
+    if (!bgRemovalOn || !source?.preview) return
+    let alive = true
+    void segmentImageBitmap(source.preview)
+      .then((mask) => {
+        if (alive) setBgMask(mask)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [bgRemovalOn, source?.preview])
 
   // Render loop, rAF-coalesced.
   useEffect(() => {
@@ -210,6 +231,7 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
         } else {
           const result = renderEdit(source.preview, effectiveDoc, canvas, {
             maxSize: previewBudget(),
+            bgMask,
           })
           setOutDims({ w: result.plan.outW, h: result.plan.outH })
         }
@@ -236,7 +258,7 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
       cancelled = true
       cancelAnimationFrame(frame)
     }
-  }, [source, effectiveDoc, geometryOnly, bypass, doc, onHistogram])
+  }, [source, effectiveDoc, geometryOnly, bypass, doc, onHistogram, bgMask])
 
   // Keyboard: ⌘Z undo, ⇧⌘Z redo, hold \ to compare.
   useEffect(() => {
@@ -296,7 +318,12 @@ export function EditorCanvas({ asset, onHistogram, onExport, hideActions }: Edit
           width={outDims.w}
           height={outDims.h}
           style={{ width: '100%', height: '100%' }}
-          className="block rounded-lg bg-black shadow-[0_18px_50px_rgba(15,23,42,0.28)] ring-1 ring-black/10 dark:ring-white/10"
+          className={cn(
+            'block rounded-lg shadow-[0_18px_50px_rgba(15,23,42,0.28)] ring-1 ring-black/10 dark:ring-white/10',
+            // Checkerboard shows through the transparent (cut-out) regions
+            // once the segmentation mask is in; before that the photo is opaque.
+            bgRemovalOn && !bgMask ? 'bg-black' : bgRemovalOn ? 'fs-checker' : 'bg-black',
+          )}
           aria-label={`Preview of ${asset.name}`}
         />
         {/* Text overlay layer: transparent 2D canvas above the graded frame.

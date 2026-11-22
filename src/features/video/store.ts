@@ -36,6 +36,7 @@ import {
   type OverlayKind,
   type SequenceLayout,
   type TitlePosition,
+  type VoiceoverClip,
   type VideoClip,
   type VideoTransition,
 } from './sequenceModel'
@@ -63,6 +64,7 @@ interface SeqSnapshot {
   clips: VideoClip[]
   overlays: OverlayClip[]
   music: MusicTrack | null
+  voiceovers: VoiceoverClip[]
   canvas: CanvasSettings
 }
 
@@ -74,6 +76,8 @@ interface VideoState {
   doc: VideoEditDoc | null
   /** Live clip list (mirrors project.videoSequence.clips). */
   sequence: VideoClip[]
+  /** Voiceover track (Kokoro TTS): plays during export. */
+  voiceovers: VoiceoverClip[]
   /** Overlay layers above the base track. */
   overlays: OverlayClip[]
   /** Selected overlay layer id (inspector target when set). */
@@ -104,6 +108,11 @@ interface VideoState {
   ensureSequence: () => void
   setActiveClip: (clipId: string | null) => void
   addClip: (assetId: string) => void
+  /** Appends a Kokoro-generated voiceover to the timeline (one undo entry). */
+  addVoiceover: (assetId: string, duration: number) => void
+  removeVoiceover: (id: string) => void
+  /** Adds Whisper-transcribed voiceover captions to the timeline overlays. */
+  addVoiceoverCaptions: (voiceoverId: string, segments: readonly CaptionSegment[]) => void
   /** Builds a polished, editable YouTube-style montage from project videos. */
   createYouTubeMontage: () => void
   setAssetDuration: (assetId: string, duration: number) => void
@@ -211,6 +220,12 @@ function newClipId(assetId: string): string {
   return `clip_${assetId}_${clipCounter}_${Math.random().toString(36).slice(2, 7)}`
 }
 
+let voiceoverCounter = 0
+function newVoiceoverId(): string {
+  voiceoverCounter += 1
+  return `voice_${Math.random().toString(36).slice(2, 8)}_${voiceoverCounter}`
+}
+
 /** Inserts (or replaces within snap distance) a keyframe, keeps track sorted. */
 function upsertKeyframe(track: Keyframe[], t: number, v: number): Keyframe[] {
   const existing = track.find((k) => Math.abs(k.t - t) <= 0.05)
@@ -233,13 +248,26 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
    * selection doubles as the legacy `activeVideoId` (asset id) so other
    * views stay coherent, and the active doc lands in `videoEdits`.
    */
-  function persist(clips: VideoClip[], music: MusicTrack | null, activeClipId: string | null, overlays?: OverlayClip[], canvas?: CanvasSettings): void {
+  function persist(
+    clips: VideoClip[],
+    music: MusicTrack | null,
+    activeClipId: string | null,
+    overlays?: OverlayClip[],
+    canvas?: CanvasSettings,
+    voiceovers?: VoiceoverClip[],
+  ): void {
     const s = useProjectsStore.getState()
     const project = s.projects.find((p) => p.id === s.currentId)
     if (!project) return
     const durations = get().durations
     const clean = sanitizeSequence(
-      { clips, music, overlays: overlays ?? get().overlays, canvas: canvas ?? get().canvas },
+      {
+        clips,
+        music,
+        overlays: overlays ?? get().overlays,
+        canvas: canvas ?? get().canvas,
+        voiceovers: voiceovers ?? get().voiceovers,
+      },
       (id) => durations[id] ?? 0,
       (id) => project.videoAssets.includes(id),
     )
@@ -264,9 +292,30 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
   }
 
   /** Full "sequence as it stands now" snapshot. */
-  function snap(now?: { clips?: VideoClip[]; music?: MusicTrack | null; overlays?: OverlayClip[]; canvas?: CanvasSettings }): SeqSnapshot {
-    const merged = { clips: get().sequence, music: get().music, overlays: get().overlays, canvas: get().canvas, ...now }
-    return { clips: merged.clips, music: merged.music, overlays: merged.overlays, canvas: merged.canvas }
+  function snap(
+    now?: {
+      clips?: VideoClip[]
+      music?: MusicTrack | null
+      overlays?: OverlayClip[]
+      canvas?: CanvasSettings
+      voiceovers?: VoiceoverClip[]
+    },
+  ): SeqSnapshot {
+    const merged = {
+      clips: get().sequence,
+      music: get().music,
+      overlays: get().overlays,
+      canvas: get().canvas,
+      voiceovers: get().voiceovers,
+      ...now,
+    }
+    return {
+      clips: merged.clips,
+      music: merged.music,
+      overlays: merged.overlays,
+      canvas: merged.canvas,
+      voiceovers: merged.voiceovers,
+    }
   }
 
   /** Records a history entry with whole-sequence snapshots. */
@@ -287,6 +336,7 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       overlays: snapshot.overlays,
       music: snapshot.music,
       canvas: snapshot.canvas,
+      voiceovers: snapshot.voiceovers,
       activeClipId: active,
       activeOverlayId: overlayActive,
       clip,
@@ -299,10 +349,19 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       pendingTransitionBefore: null,
       revision: get().revision + 1,
     })
-    persist(snapshot.clips, snapshot.music, active, snapshot.overlays, snapshot.canvas)
+    persist(snapshot.clips, snapshot.music, active, snapshot.overlays, snapshot.canvas, snapshot.voiceovers)
   }
 
-  function adopt(sequence: { clips: VideoClip[]; music: MusicTrack | null; overlays?: OverlayClip[]; canvas?: CanvasSettings }, preferredClipId: string | null): void {
+  function adopt(
+    sequence: {
+      clips: VideoClip[]
+      music: MusicTrack | null
+      overlays?: OverlayClip[]
+      canvas?: CanvasSettings
+      voiceovers?: VoiceoverClip[]
+    },
+    preferredClipId: string | null,
+  ): void {
     const durations = get().durations
     const clip = sequence.clips.find((c) => c.id === preferredClipId) ?? sequence.clips[0] ?? null
     const canvas = sequence.canvas ?? defaultCanvasSettings()
@@ -311,6 +370,7 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       overlays: sequence.overlays ?? [],
       music: sequence.music,
       canvas,
+      voiceovers: sequence.voiceovers ?? [],
       activeClipId: clip?.id ?? null,
       activeOverlayId: null,
       clip,
@@ -328,7 +388,7 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       history: new EditHistory<SeqSnapshot>(),
       revision: get().revision + 1,
     })
-    persist(sequence.clips, sequence.music, clip?.id ?? null, sequence.overlays ?? [], canvas)
+    persist(sequence.clips, sequence.music, clip?.id ?? null, sequence.overlays ?? [], canvas, sequence.voiceovers ?? [])
   }
 
   return {
@@ -337,6 +397,7 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
     clip: null,
     doc: null,
     sequence: [],
+    voiceovers: [],
     overlays: [],
     music: null,
     canvas: defaultCanvasSettings(),
@@ -401,6 +462,53 @@ export const useVideoEditor = create<VideoState>()((set, get) => {
       recordHistory('Add clip', before, snap({ clips: next }))
       set({ sequence: next, activeClipId: clip.id, clip, doc: blank, revision: get().revision + 1 })
       persist(next, get().music, clip.id)
+    },
+
+    addVoiceover: (assetId, duration) => {
+      const { voiceovers, sequence, durations } = get()
+      if (voiceovers.some((v) => v.assetId === assetId)) return
+      const clip: VoiceoverClip = {
+        id: newVoiceoverId(),
+        assetId,
+        start: layoutOf(sequence, durations).total,
+        duration: Math.max(0.2, duration),
+      }
+      const before = snap()
+      const next = [...voiceovers, clip]
+      recordHistory('Add voiceover', before, snap({ voiceovers: next }))
+      set({ voiceovers: next, revision: get().revision + 1 })
+      persist(get().sequence, get().music, get().activeClipId, get().overlays, get().canvas, next)
+    },
+
+    removeVoiceover: (id) => {
+      const { voiceovers } = get()
+      const next = voiceovers.filter((v) => v.id !== id)
+      const before = snap()
+      recordHistory('Remove voiceover', before, snap({ voiceovers: next }))
+      set({ voiceovers: next, revision: get().revision + 1 })
+      persist(get().sequence, get().music, get().activeClipId, get().overlays, get().canvas, next)
+    },
+
+    addVoiceoverCaptions: (voiceoverId, segments) => {
+      if (segments.length === 0) return
+      const before = snap()
+      const base = get().voiceovers.find((v) => v.id === voiceoverId)?.start ?? 0
+      const defaults = { ...ANIM_DEFAULTS, ...CAPTION_BASE }
+      const kept = get().overlays.filter((o) => !o.caption)
+      const captions: OverlayClip[] = segments.slice(0, 400).map((segment) => ({
+        id: newClipId('caption'),
+        kind: 'text',
+        text: segment.text.slice(0, 140),
+        start: Math.round((base + segment.start) * 20) / 20,
+        duration: Math.max(MIN_OVERLAY_OUT, Math.round((segment.end - segment.start) * 20) / 20),
+        base: { ...defaults },
+        keyframes: { scale: [], x: [], y: [], opacity: [] },
+        caption: true,
+      }))
+      const next = [...kept, ...captions]
+      recordHistory('Voiceover captions', before, snap({ overlays: next }))
+      set({ overlays: next, activeOverlayId: null, revision: get().revision + 1 })
+      persist(get().sequence, get().music, get().activeClipId, next)
     },
 
     createYouTubeMontage: () => {

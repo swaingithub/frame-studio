@@ -6,6 +6,7 @@ import {
   sanitizeEditDoc,
   withAdjustment,
   withAdjustments,
+  withBackgroundRemoval,
   withCopiedGrade,
   withCurves,
   withGeometry,
@@ -87,6 +88,8 @@ interface PhotoEditorState {
   addTextOverlay: (text: string) => void
   /** Live overlay drag (position/scale/…) — commit records the gesture. */
   setOverlayLive: (id: string, patch: Partial<PhotoTextOverlay>) => void
+  /** AI background removal on/off — history + write-through to the project doc. */
+  setBackgroundRemoval: (enabled: boolean) => void
   /** Removes one text overlay (one history entry). */
   removeTextOverlay: (id: string) => void
   /** Copy this photo's grade (not crop) onto every other photo in the project. */
@@ -293,6 +296,17 @@ export const usePhotoEditor = create<PhotoEditorState>()((set, get) => ({
     if (!list.some((o) => o.id === id)) return
     const next = withTextOverlays(doc, list.filter((o) => o.id !== id))
     get().history.record(photoId, 'Remove text', doc, next)
+    writeDocToProject(photoId, next)
+    set({ doc: next, revision: get().revision + 1 })
+  },
+
+  setBackgroundRemoval: (enabled) => {
+    const doc = get().doc
+    const photoId = currentPhotoId()
+    if (!doc || !photoId) return
+    if ((doc.backgroundRemoval?.enabled === true) === enabled) return
+    const next = withBackgroundRemoval(doc, enabled)
+    get().history.record(photoId, enabled ? 'Remove background' : 'Restore background', doc, next)
     writeDocToProject(photoId, next)
     set({ doc: next, revision: get().revision + 1 })
   },

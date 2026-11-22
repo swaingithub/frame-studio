@@ -281,9 +281,9 @@ function StripClip({
     >
       <button type="button" onClick={onSelect} aria-pressed={selected} className="flex h-full w-full flex-col items-stretch text-left" aria-label={`Select clip ${index + 1}: ${name ?? ''}`}>
         <span className="flex items-center gap-1 px-2 pt-1.5">
-          {asset?.kind === 'audio' ? <Music2 size={11} className={selected ? 'text-accent' : 'text-lo'} /> : <Film size={11} className={selected ? 'text-accent' : 'text-lo'} />}
+          {asset?.kind === 'audio' ? <Music2 size={11} className={selected ? 'text-hi' : 'text-lo'} /> : <Film size={11} className={selected ? 'text-hi' : 'text-lo'} />}
           <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-hi">{name ?? 'Clip'}</span>
-          <span className="shrink-0 text-[9px] tabular-nums text-lo">{formatDuration(out)}</span>
+          <span className={cn('shrink-0 text-[9px] tabular-nums', selected ? 'text-hi' : 'text-lo')}>{formatDuration(out)}</span>
         </span>
         <span className="relative mx-2 mt-1 min-h-0 flex-1 overflow-hidden rounded-sm bg-black/20">
           {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" aria-hidden /> : null}

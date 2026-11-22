@@ -16,12 +16,13 @@
   --c-stage: #d9dbde;
   --c-hi: #17191c;
   --c-lo: #5f6770;
-  --c-accent: #3867ef;
-  --c-accent-soft: rgba(56, 103, 239, 0.12);
-  --c-on-accent: #ffffff;
+  /* CapCut-style cyan accent (#01E0F8 — verified at AA contrast). */
+  --c-accent: #01e0f8;
+  --c-accent-soft: rgba(1, 224, 248, 0.12);
+  --c-on-accent: #17191c;
   --c-danger: #cf3f3f;
   --c-on-danger: #ffffff;
-  --c-ring: rgba(56, 103, 239, 0.55);
+  --c-ring: rgba(1, 224, 248, 0.55);
 }
 
 .dark {
@@ -33,12 +34,12 @@
   --c-stage: #08090b;
   --c-hi: #e9ecef;
   --c-lo: #8b939d;
-  --c-accent: #5b8bff;
-  --c-accent-soft: rgba(91, 139, 255, 0.15);
+  --c-accent: #40daf5;
+  --c-accent-soft: rgba(64, 218, 245, 0.15);
   --c-on-accent: #0c0d10;
   --c-danger: #e25555;
   --c-on-danger: #0c0d10;
-  --c-ring: rgba(91, 139, 255, 0.6);
+  --c-ring: rgba(64, 218, 245, 0.6);
 }
 
 @theme inline {
@@ -213,6 +214,11 @@
    Touch affordances. Hover-only controls are invisible on finger input, so
    coarse pointers reveal them and get larger hit targets (44 px guideline).
 --------------------------------------------------------------------------- */
+/* Checkerboard behind AI-cutout regions (transparent subject) in previews. */
+.fs-checker {
+  background: repeating-conic-gradient(rgba(255, 255, 255, 0.18) 0deg 90deg, rgba(17, 20, 24, 0.3) 90deg 180deg);
+}
+
 /* Asset-card label: fade out at the edge instead of a hard ellipsis cut. */
 .fs-label-fade {
   overflow: hidden;

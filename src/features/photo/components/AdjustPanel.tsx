@@ -15,6 +15,7 @@ import { useProjectsStore } from '../../projects/store'
 import { defaultMask, MASK_SHAPES, MASK_SHAPE_LABELS, type Mask } from '../../../core/adjustments/edits'
 import { statsFromHistogram } from '../../../core/adjustments/presets'
 import { cn } from '../../../lib/cn'
+import { User } from 'lucide-react'
 import type { Histogram } from '../../../core/render/histogram'
 
 /**
@@ -70,6 +71,7 @@ export function AdjustPanel({ doc, histogram, unedited, simpleMode = true }: Adj
         sourceKey={photoId ?? undefined}
       />
       <LookStrength />
+      <BackgroundRemovalSection />
 
       {ADJUSTMENT_SECTIONS.map((section) => {
         const params = ADJUSTMENTS.filter((p) => p.section === section)
@@ -191,6 +193,38 @@ export function AdjustPanel({ doc, histogram, unedited, simpleMode = true }: Adj
         <HistoryList />
       </section>
     </div>
+  )
+}
+
+/** AI background removal: on/off toggle. First use downloads the segmenter. */
+function BackgroundRemovalSection(): ReactNode {
+  const doc = usePhotoEditor((s) => s.doc)
+  const setBackgroundRemoval = usePhotoEditor((s) => s.setBackgroundRemoval)
+  const on = doc?.backgroundRemoval?.enabled === true
+  if (!doc) return null
+  return (
+    <section aria-label="Background removal">
+      <button
+        type="button"
+        aria-pressed={on}
+        onClick={() => setBackgroundRemoval(!on)}
+        className={cn(
+          'flex w-full items-center justify-between rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors',
+          on ? 'bg-accent text-onaccent' : 'bg-elevated text-hi hover:bg-hover',
+        )}
+      >
+        <span className="flex items-center gap-1.5">
+          <User size={12} />
+          {on ? 'Subject cut out' : 'Remove background'}
+        </span>
+        <span className={cn('text-[10px]', on ? 'text-onaccent/70' : 'text-lo')}>{on ? 'On' : 'Off'}</span>
+      </button>
+      {!on ? (
+        <p className="mt-1.5 text-[10px] leading-snug text-lo">
+          Keeps the subject, drops the rest. First use downloads a small model (~250 KB), then it runs offline on this device.
+        </p>
+      ) : null}
+    </section>
   )
 }
 

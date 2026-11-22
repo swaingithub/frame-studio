@@ -41,13 +41,13 @@ export function WelcomeScreen(): ReactNode {
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-accent-soft shadow-[0_12px_30px_var(--c-accent-soft)]">
           <Sparkles size={26} className="text-accent" />
         </div>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">Private creator studio</p>
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-lo">Private creator studio</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-hi sm:text-4xl">Make something worth sharing.</h1>
         <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-lo">
           Edit photos and videos with a simple workflow. Your original files stay on this device.
         </p>
         <div className="mx-auto mt-5 flex max-w-md items-center justify-center gap-2 text-[11px] text-lo">
-          <ShieldCheck size={13} className="text-emerald-500" /> Private by design <span className="text-line">•</span> No watermark <span className="text-line">•</span> Autosaves
+          <ShieldCheck size={13} className="text-emerald-500" /> Private by design <span className="text-lo">•</span> No watermark <span className="text-lo">•</span> Autosaves
         </div>
         <div className="mt-8 grid gap-3 sm:grid-cols-3">
           <button

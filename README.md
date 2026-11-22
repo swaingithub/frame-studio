@@ -48,7 +48,9 @@ All other commands:
 | 5.11 | Video — **stability & responsiveness pass**: frame loop survives bad frames, edits no longer restart the clock, memoized timeline, 20 fps inspector updates, accurate paused-seek repaints, export watchdog and audio-node cleanup | ✅ Done |
 | 5.12 | **Responsive & touch pass**: overlay drawers / bottom inspector below 1180 px, compact header, touch-sized timeline handles and always-visible clip actions, phone-sized preview budget (video and photo), MP4 export fallback for Safari, installable PWA manifest + offline service worker | ✅ Done |
 | 5.13 | Video — **transition library**: 15 transitions (dissolve, 4 slides, 4 wipes, circle, zoom, blur, fade to black/white) with adjustable length, overlap layout shared by preview/export, paused-scrub partner loading, timeline badges | ✅ Done |
-| 6 | AI features — **auto-captions** (Whisper speech-to-text fully in-browser: opt-in one-time model download, then offline; language picker, captions as editable text overlays) · **background removal** (MediaPipe selfie segmentation, person cutout per clip, rendered through preview & export) · **beat-sync** (local tempo analysis of the music, timeline beat grid, one-click "Sync cuts to beats") · **WebCodecs export** (real MP4 H.264+AAC via VideoEncoder/AudioEncoder + mp4-muxer, MediaRecorder fallback) · **stickers** (offline emoji library, inserted as animated text overlays) | In progress |
+| 6 | AI features — **auto-captions** (Whisper speech-to-text fully in-browser: opt-in one-time model download, then offline; language picker, captions as editable text overlays) · **background removal** (MediaPipe selfie segmentation, person cutout per clip and per photo, rendered through preview & export as transparent PNG) · **beat-sync** (local tempo analysis of the music, timeline beat grid, one-click "Sync cuts to beats") · **WebCodecs export** (real MP4 H.264+AAC via VideoEncoder/AudioEncoder + mp4-muxer, MediaRecorder fallback) · **stickers** (offline emoji library, inserted as animated text overlays) | Done |
+| 6.1 | Video — **voiceover** (generate speech from pasted text with Kokoro TTS — on-device (~92 MB download once), added to the voice track and plays in export; all local) · **voiceover captions** (transcribe a voiceover to timeline captions with Whisper — shares the auto-captions model) · **fixes**: CSP now allows the Hugging Face + jsDelivr CDNs for AI model downloads (which also fixes the opt-in Whisper/MediaPipe downloads) | ✅ Done |
+| 6.1 | Photo — **meme generator** (meme PNG from a library photo + top/bottom captions, via the Library **Meme** tool) · **combine images** (stitch 2+ library photos — row/column/grid) · **poster maker** (title/subtitle/tagline lines on a photo, sizes + live preview) · **video converter** (re-encode any local video to MP4 H.264 or WebM VP9 at original or reduced resolution — WebCodecs, runs fully in-browser) · **design**: accent shifted to CapCut's cyan/teal (`#01E0F8` / `#40DAF5`) with on-accent text that passes AA; **fixes**: 1080p H.264 export now uses Level 4.0 (`avc1.640028`) instead of Level 3.1, which couldn't encode 1920×1080; CSP allows the MediaPipe model + scripts (GCS/jsDelivr) | ✅ Done |
 | 7 | **Product hardening** — photo **tone curves** (interactive master curve) & **8-band HSL mixer** in the shared GL/Canvas pipeline · **batch grade** ("Apply grade to all photos", crops preserved) · **CI** (GitHub Actions: typecheck → lint → tests → build → Playwright E2E) · **E2E smoke suite** (boot, CSP integrity, privacy: no unexpected cross-origin traffic) · **security headers** (CSP that keeps AI model opt-ins the only cross-origin fetches, `X-Frame-Options`, `Permissions-Policy`) · **WCAG AA contrast pass** (new on-accent/on-danger tokens, audited in `docs/A11Y.md`) | ✅ Done |
 
 ## Architecture overview
@@ -70,8 +72,11 @@ src/
 │  ├─ library/             Import pipeline, metadata probes, filters, grid UI
 │  ├─ photo/               Photo editor store, EditHistory, inspector
 │  ├─ video/               Video editor: sequence model (clips, transitions,
-│  │                       titles, music + pure layout/split math), store,
-│  │                       sequence stage engine, MediaRecorder export
+│  │                       titles, voiceovers, music + pure layout/split
+│  │                       math), store, sequence stage engine, WebCodecs
+│  │                       export (MP4 H.264 / WebM VP9, precise frames),
+│  │                       Kokoro TTS voiceover generator (voiceover.ts),
+│  │                       voiceover captions (voiceoverCaptions.ts)
 │  ├─ projects/            Project model (pure), autosaving store, dialogs
 │  └─ workspace/           App shell, panels, photo/video workspaces
 ├─ workers/
@@ -125,6 +130,9 @@ license.
 1. **Open Frame Studio** → *Try a sample project*.
 2. **Photos**: click a photo → pick a Look (`Auto`, `Vivid`, `B&W`, …) or drag
    sliders → hit **Export**. Compare with the original via the eye button.
+   Cut the background out of any photo with **Remove background**, and make
+   memes, posters, or combine photos in the **Library** (**Meme**,
+   **Combine**, **Poster**).
 3. **Videos**: switch to **Video Editor** → build a sequence: add clips from
    the library, **split at the playhead** (scissors), trim by dragging a clip's
    edges, **drag clips left/right to reorder** them, and duplicate/delete with
@@ -143,6 +151,12 @@ license.
    **`.mp4` (H.264 + AAC, WebCodecs)** where the browser supports it —
    precise frame encoding with hardware encoders — and falls back to
    MediaRecorder (`.webm`, or `.mp4` on Safari) otherwise. Titles included.
+   Or **Convert**: pick a library video, choose MP4 H.264 or WebM VP9 at the
+   original or a smaller resolution and convert — done in your browser.
+   And **Voiceover**: paste text in the inspector, pick a Kokoro voice,
+   **Generate** — the WAV lands on the voice track and plays in export.
+    And **Voiceover captions**: pick a voiceover, **Transcribe a voiceover…**
+    — Whisper turns the generated speech into captions on the timeline.
    On phones, open the **Library** and **Inspector** from the header buttons;
    the inspector appears as a bottom sheet and both close with the backdrop or
    <kbd>Esc</kbd>.

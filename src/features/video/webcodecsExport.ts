@@ -74,6 +74,34 @@ export function micros(startedAt: number, now: number): number {
   return Math.max(0, Math.round((now - startedAt) * 1000))
 }
 
+/**
+ * L3.1 supports ≤1280×720; higher levels handle 1080p and beyond. Levels are
+ * resolved per canvas via `isConfigSupported`, so the ladder is verified.
+ */
+const AVC_LADDER = ['avc1.42001f', 'avc1.640028', 'avc1.640029', 'avc1.64002A', 'avc1.640033']
+
+async function codecSupported(codec: string, w: number, h: number): Promise<boolean> {
+  try {
+    const sup = await VideoEncoder.isConfigSupported({ codec, width: w, height: h, bitrate: 12_000_000, framerate: 30 })
+    return sup.supported === true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Upgrades the requested AVC codec string when the requested dimensions are
+ * outside its level (e.g. 1080p with L3.1). Returns the same format object
+ * otherwise.
+ */
+export async function upgradeCodec(format: WcFormat, w: number, h: number): Promise<WcFormat> {
+  if (format.video !== 'avc' || typeof VideoEncoder === 'undefined') return format
+  for (const codec of AVC_LADDER) {
+    if (await codecSupported(codec, w, h)) return codec === format.videoCodec ? format : { ...format, videoCodec: codec }
+  }
+  return format
+}
+
 export interface RecordWebCodecsOptions extends RecordStreamOptions {
   /** Chosen format (from pickWcFormat). */
   format: WcFormat
@@ -90,11 +118,12 @@ const KEYFRAME_INTERVAL_S = 2
  * swap between the two transparently.
  */
 export async function recordWebCodecs(options: RecordWebCodecsOptions): Promise<Blob> {
-  const { canvas, format } = options
+  const { canvas } = options
   if (typeof VideoEncoder === 'undefined' || typeof AudioEncoder === 'undefined') {
     throw new Error('WebCodecs is not available in this browser.')
   }
   const { w, h } = evenDimensions(canvas.width, canvas.height)
+  const format = await upgradeCodec(options.format, w, h)
   if (w < 2 || h < 2) throw new Error('Canvas is too small to encode.')
 
   const ctx = audioContext()

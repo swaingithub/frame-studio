@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react'
 import {
   Circle,
   Clapperboard,
+  Combine,
   Heart,
   Image as ImageIcon,
+  LayoutTemplate,
+  Laugh,
   Music2,
   Search,
   Star,
@@ -24,6 +27,9 @@ import { useImport } from './useImport'
 import { AssetGrid } from './AssetGrid'
 import { Button } from '../../../ui/button'
 import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog'
+import { MemeDialog } from '../../memes/MemeDialog'
+import { CombineDialog } from '../../photo/components/CombineDialog'
+import { PosterMakerDialog } from '../../photo/components/PosterMakerDialog'
 import { useProjectsStore } from '../../projects/store'
 import { formatBytes } from '../../../core/format'
 import { useStorageEstimate } from '../../../lib/hooks'
@@ -50,6 +56,9 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
   const filters = useLibraryStore()
   const { pickFiles, importing } = useImport()
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null)
+  const [memeOpen, setMemeOpen] = useState(false)
+  const [combineOpen, setCombineOpen] = useState(false)
+  const [posterOpen, setPosterOpen] = useState(false)
   const currentProject = useProjectsStore((s) => s.projects.find((p) => p.id === s.currentId) ?? null)
   const addAssetsToCurrent = useProjectsStore((s) => s.addAssetsToCurrent)
   const removeAssetFromCurrent = useProjectsStore((s) => s.removeAssetFromCurrent)
@@ -94,6 +103,36 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
         <Button size="sm" variant="primary" onClick={pickFiles} disabled={importing} title="Import files (⌘I)">
           <Plus size={13} />
           Import
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setCombineOpen(true)}
+          title="Combine 2+ photos into one"
+          disabled={(assets?.length ?? 0) === 0 || importing}
+        >
+          <Combine size={13} />
+          Combine
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setPosterOpen(true)}
+          title="Create a poster from a photo"
+          disabled={(assets?.length ?? 0) === 0 || importing}
+        >
+          <LayoutTemplate size={13} />
+          Poster
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setMemeOpen(true)}
+          title="Generate a meme from a photo"
+          disabled={(assets?.length ?? 0) === 0 || importing}
+        >
+          <Laugh size={13} />
+          Meme
         </Button>
         {onClose ? (
           <button
@@ -339,6 +378,9 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
       )}
 
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+      <MemeDialog open={memeOpen} onClose={() => setMemeOpen(false)} />
+      <CombineDialog open={combineOpen} onClose={() => setCombineOpen(false)} />
+      <PosterMakerDialog open={posterOpen} onClose={() => setPosterOpen(false)} />
     </div>
   )
 }

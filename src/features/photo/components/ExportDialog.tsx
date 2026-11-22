@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Download, Loader2 } from 'lucide-react'
 import { Dialog, DialogContent } from '../../../ui/dialog'
 import { Button } from '../../../ui/button'
@@ -36,6 +36,11 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
   const [maxEdge, setMaxEdge] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
   const blob = useAssetBlob(asset)
+
+  // Background removal produces transparent PNGs — surface that as the format.
+  useEffect(() => {
+    if (doc?.backgroundRemoval?.enabled) setFormat('image/png')
+  }, [doc])
 
   async function runExport(): Promise<void> {
     if (!doc) return
@@ -134,8 +139,9 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
               <span className="block text-xs text-lo">Format</span>
               <select
                 value={format}
+                disabled={doc?.backgroundRemoval?.enabled === true}
                 onChange={(e) => setFormat(e.target.value as ExportFormat)}
-                className="w-full rounded-md border border-line bg-elevated px-3 py-2 text-sm text-hi outline-none"
+                className="w-full rounded-md border border-line bg-elevated px-3 py-2 text-sm text-hi outline-none disabled:opacity-40"
               >
                 {FORMATS.map((f) => (
                   <option key={f.value} value={f.value}>
@@ -143,6 +149,9 @@ export function ExportDialog({ asset, open, onClose }: ExportDialogProps): React
                   </option>
                 ))}
               </select>
+              {doc?.backgroundRemoval?.enabled === true ? (
+                <span className="block text-xs text-lo">PNG (transparent background)</span>
+              ) : null}
             </label>
 
             <label className="block space-y-1.5">

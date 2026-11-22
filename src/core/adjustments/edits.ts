@@ -45,6 +45,8 @@ export interface EditDoc {
   chromaKey?: ChromaKey | null
   /** Shape mask revealing part of the frame — null = off. */
   mask?: Mask | null
+  /** AI background removal (photo only): true = keep only the subject. */
+  backgroundRemoval?: { enabled: boolean } | null
   /** Decorative text layers (photo only), bottom→top in array order. */
   textOverlays?: PhotoTextOverlay[]
   /** Which one-click look is active and its dialled strength (photo only). */
@@ -238,6 +240,7 @@ export function isDocNeutral(doc: EditDoc): boolean {
   const chromaOff = !doc.chromaKey?.enabled
   const maskOff = !doc.mask || doc.mask.shape === 'none'
   const overlaysOff = (doc.textOverlays?.length ?? 0) === 0
+  const bgOff = doc.backgroundRemoval?.enabled !== true
   return (
     isNeutral(doc.adjustments) &&
     geometryNeutral &&
@@ -245,7 +248,8 @@ export function isDocNeutral(doc: EditDoc): boolean {
     isNeutralHsl(hsl) &&
     chromaOff &&
     maskOff &&
-    overlaysOff
+    overlaysOff &&
+    bgOff
   )
 }
 
@@ -297,6 +301,11 @@ export function withMask(doc: EditDoc, patch: Partial<Mask>): EditDoc {
 /** Replaces the text overlay list (pure). */
 export function withTextOverlays(doc: EditDoc, overlays: PhotoTextOverlay[]): EditDoc {
   return { ...doc, textOverlays: overlays.slice(0, 12) }
+}
+
+/** Toggles AI background removal (pure). */
+export function withBackgroundRemoval(doc: EditDoc, enabled: boolean): EditDoc {
+  return { ...doc, backgroundRemoval: enabled ? { enabled: true } : null }
 }
 
 /** Clamps hex colors to a safe `#rrggbb` (or a fallback) form. */
@@ -403,6 +412,11 @@ export function sanitizeEditDoc(raw: unknown): EditDoc {
   safe.geometry.crop = crop
   safe.chromaKey = rec.chromaKey === undefined || rec.chromaKey === null ? null : sanitizeChromaKey(rec.chromaKey)
   safe.mask = rec.mask === undefined || rec.mask === null ? null : sanitizeMask(rec.mask)
+  const bgRaw = rec.backgroundRemoval
+  safe.backgroundRemoval =
+    typeof bgRaw === 'object' && bgRaw !== null && (bgRaw as Record<string, unknown>).enabled === true
+      ? { enabled: true }
+      : null
   safe.textOverlays = sanitizeTextOverlays(rec.textOverlays)
   safe.look = sanitizeLook(rec.look)
   safe.curves = rec.curves === undefined ? defaultToneCurve() : sanitizeToneCurve(rec.curves)

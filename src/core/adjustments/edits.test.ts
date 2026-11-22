@@ -7,6 +7,7 @@ import {
   sanitizeTextOverlay,
   sanitizeTextOverlays,
   withAdjustment,
+  withBackgroundRemoval,
   withCopiedGrade,
   withGeometry,
   withMask,
@@ -130,5 +131,22 @@ describe('text overlays', () => {
     expect(isDocNeutral(base)).toBe(true)
     const withOverlay = withTextOverlays(base, [{ id: 'a', text: 'Hi', x: 0.5, y: 0.8, scale: 1, opacity: 1, rotation: 0, color: '#ffffff' }])
     expect(isDocNeutral(withOverlay)).toBe(false)
+  })
+})
+
+describe('background removal', () => {
+  it('toggles the flag on the edit doc', () => {
+    const on = withBackgroundRemoval(createDefaultEditDoc(), true)
+    expect(on.backgroundRemoval).toEqual({ enabled: true })
+    expect(isDocNeutral(on)).toBe(false)
+    const off = withBackgroundRemoval(on, false)
+    expect(off.backgroundRemoval).toBeNull()
+  })
+
+  it('sanitizes from storage (defaults to off)', () => {
+    expect(sanitizeEditDoc({ backgroundRemoval: { enabled: true } }).backgroundRemoval).toEqual({ enabled: true })
+    expect(sanitizeEditDoc({ backgroundRemoval: { enabled: false } }).backgroundRemoval).toBeNull()
+    expect(sanitizeEditDoc({ backgroundRemoval: 'yes' }).backgroundRemoval).toBeNull()
+    expect(sanitizeEditDoc(createDefaultEditDoc()).backgroundRemoval).toBeNull()
   })
 })
