@@ -4,9 +4,10 @@
  * Registration happens only in production builds. Navigations stay
  * network-first (so a new deploy is picked up immediately when online) and
  * fall back to the cached shell offline. Cache-first is limited to the
- * hashed build assets under /assets/ and the shell; music and opt-in AI
- * model files are always fetched fresh so they never accumulate in the
- * never-expiring cache. User media lives in IndexedDB/OPFS, never here.
+ * hashed build assets under /assets/ and the shell, minus runtime WASM
+ * binaries; music, opt-in AI model files and other same-origin GETs are
+ * always fetched fresh so they never accumulate in the never-expiring
+ * cache. User media lives in IndexedDB/OPFS, never here.
  */
 // Bump when the shell/UI changes so installed builds invalidate stale assets.
 const CACHE = 'frame-studio-v3'
@@ -46,8 +47,14 @@ self.addEventListener('fetch', (event) => {
   }
 
   // Only the Vite build outputs are cached: the shell ('/' and '/index.html')
-  // and everything under '/assets/'. Everything else (music, AI models, the
-  // manifest, the app itself) is fetched on demand, never cached.
+  // and everything under '/assets/' — except runtime WASM binaries
+  // (ONNX Runtime ships ~tens of MB; they are always fetched fresh).
+  // Everything else (music, the manifest, the app itself) is fetched on
+  // demand, never cached.
+  if (url.pathname.endsWith('.wasm')) {
+    event.respondWith(fetch(request))
+    return
+  }
   if (url.pathname !== '/' && url.pathname !== '/index.html' && !url.pathname.startsWith('/assets/')) {
     event.respondWith(fetch(request))
     return
