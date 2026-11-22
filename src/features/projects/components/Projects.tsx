@@ -209,8 +209,7 @@ export function ManageProjectsDialog({
     setBusy('import')
     setImportError(null)
     try {
-      const json: unknown = JSON.parse(await file.text())
-      const id = await importProjectBackup(json)
+      const id = await importProjectBackup(file)
       await useProjectsStore.getState().reload()
       useProjectsStore.getState().open(id)
       onOpenChange(false)
@@ -251,7 +250,7 @@ export function ManageProjectsDialog({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".json,application/json"
+                accept=".json,.zip,application/json,application/zip"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0]
