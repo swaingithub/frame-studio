@@ -7,6 +7,18 @@ export default defineConfig({
   build: {
     target: 'es2022',
     sourcemap: true,
+    rollupOptions: {
+      output: {
+        // Split the two editors into their own chunks — they're the bulk of
+        // the app, and the shell only needs the chunks of the workspace
+        // being used.
+        manualChunks(id) {
+          if (id.includes('/features/video/')) return 'video'
+          if (id.includes('/features/photo/')) return 'photo'
+          if (id.includes('/features/memes/')) return 'photo'
+        },
+      },
+    },
   },
   worker: {
     format: 'es',

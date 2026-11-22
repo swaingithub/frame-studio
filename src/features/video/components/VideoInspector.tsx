@@ -11,6 +11,8 @@ import { useVideoEditor, layoutOf, useInspectorTime, videoEditsChanged } from '.
 import { useCaptions, type CaptionStatus } from '../useCaptions'
 import { generateVoiceover, kokoroVoiceNames } from '../voiceover'
 import { transcribeVoiceoverWav } from '../voiceoverCaptions'
+import { extractClipAudio } from '../captionAudio'
+import { detectBeats } from '../beatDetect'
 import { importFiles } from '../../library/import'
 import { toast } from '../../../ui/toastStore'
 import { Button } from '../../../ui/button'
@@ -1565,9 +1567,7 @@ function BeatControls(): ReactNode {
     setStatus('analysing')
     setError(null)
     try {
-      const { extractClipAudio } = await import('../captionAudio')
       const samples = await extractClipAudio(blob, 0, null, 300)
-      const { detectBeats } = await import('../beatDetect')
       const info = detectBeats(samples, 16000)
       if (info.beats.length < 4) {
         setError('No steady tempo found in this track.')

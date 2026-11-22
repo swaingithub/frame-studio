@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { UploadCloud, X } from 'lucide-react'
 import { Header } from './components/Header'
-import { PhotoWorkspace } from './components/PhotoWorkspace'
-import { VideoWorkspace } from './components/VideoWorkspace'
+// The editors are the bulk of the app — lazy-load them so the shell renders
+// without downloading them; the chunk is fetched on first open.
+const PhotoWorkspace = lazy(() => import('./components/PhotoWorkspace').then((m) => ({ default: m.PhotoWorkspace })))
+const VideoWorkspace = lazy(() => import('./components/VideoWorkspace').then((m) => ({ default: m.VideoWorkspace })))
 import { InspectorPanel } from './components/InspectorPanel'
 import { WelcomeScreen } from './components/WelcomeScreen'
 import { FirstRunCoach } from './components/FirstRunCoach'
@@ -108,9 +110,13 @@ export function Shell(): ReactNode {
             </div>
           ) : project ? (
             project.activeWorkspace === 'photo' ? (
-              <PhotoWorkspace />
+              <Suspense fallback={null}>
+                <PhotoWorkspace />
+              </Suspense>
             ) : (
-              <VideoWorkspace />
+              <Suspense fallback={null}>
+                <VideoWorkspace />
+              </Suspense>
             )
           ) : (
             <WelcomeScreen />
