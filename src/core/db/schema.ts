@@ -83,11 +83,17 @@ export class FrameStudioDB extends Dexie {
 
   constructor() {
     super('frame-studio')
-    this.version(1).stores({
-      projects: 'id, name, updatedAt',
-      assets: 'id, name, kind, addedAt, favorite, rating, *tags',
-      files: 'key',
-    })
+    this.version(2)
+      .stores({
+        projects: 'id, name, updatedAt',
+        assets: 'id, name, kind, addedAt, favorite, rating, *tags',
+        files: 'key',
+      })
+      .upgrade(() => {
+        // Migration scaffolding: future schema changes bump the version and
+        // plug in here — new stores, or data moves on the upgrade transaction.
+        // Nothing to migrate yet (v2 is a no-op upgrade).
+      })
   }
 }
 
