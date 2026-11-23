@@ -12,7 +12,7 @@
  * by the user; nothing is uploaded anywhere.
  */
 
-import { unzipSync, zipSync } from 'fflate'
+import { unzipSync, Zip, ZipPassThrough } from 'fflate'
 import { db } from '../../core/db/schema'
 import { getBlob, putBlob } from '../../core/db/blobStore'
 import { newId } from '../../core/id'
@@ -68,17 +68,32 @@ export async function exportProjectBackup(projectId: string): Promise<void> {
   const project = await db.projects.get(projectId)
   if (!project) throw new Error('Project not found')
   const ids = referencedIds(project)
-  const files: Record<string, Uint8Array> = {}
+
+  // Stream the zip with fflate's Zip class: media goes in via ZipPassThrough
+  // (store-only — compressed media rarely shrinks further, and deflate on
+  // already-compressed bytes just wastes CPU), so peak memory is one asset
+  // plus the emitted zip bytes instead of every asset in the project.
+  const chunks: Uint8Array<ArrayBuffer>[] = []
+  const zip = new Zip((err, data) => {
+    if (err) throw err
+    if (data) chunks.push(data)
+  })
+  const addStored = (name: string, bytes: Uint8Array): void => {
+    const entry = new ZipPassThrough(name)
+    zip.add(entry)
+    entry.push(bytes, true)
+  }
+
   const entries: ZipAssetEntry[] = []
   for (const id of ids) {
     const asset = await db.assets.get(id)
     if (!asset) continue
     const file = await getBlob({ key: asset.storageKey, storage: asset.storage })
     if (!file) continue
-    files[assetEntry(asset.id)] = new Uint8Array(await file.arrayBuffer())
+    addStored(assetEntry(asset.id), new Uint8Array(await file.arrayBuffer()))
     if (asset.thumbKey) {
       const thumb = await getBlob({ key: asset.thumbKey, storage: asset.storage })
-      if (thumb) files[thumbEntry(asset.id)] = new Uint8Array(await thumb.arrayBuffer())
+      if (thumb) addStored(thumbEntry(asset.id), new Uint8Array(await thumb.arrayBuffer()))
     }
     entries.push({ meta: asset })
   }
@@ -89,10 +104,11 @@ export async function exportProjectBackup(projectId: string): Promise<void> {
     project,
     assets: entries,
   }
-  files['manifest.json'] = new TextEncoder().encode(JSON.stringify(manifest))
-  const zip = zipSync(files)
+  addStored('manifest.json', new TextEncoder().encode(JSON.stringify(manifest)))
+  zip.end()
+
   const name = normalizeProjectName(project.name).replace(/[\\/:*?"<>|]+/g, '_')
-  await downloadBlob(new Blob([zip], { type: 'application/zip' }), `${name}${ZIP_EXT}`)
+  await downloadBlob(new Blob(chunks, { type: 'application/zip' }), `${name}${ZIP_EXT}`)
 }
 
 /** Restores the assets in a v2 manifest and installs the project. */
