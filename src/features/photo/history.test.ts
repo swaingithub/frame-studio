@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createDefaultEditDoc, withAdjustment } from '../../core/adjustments/edits'
-import { EditHistory } from './history'
+import { EditHistory } from '../../core/history'
 
 function docA(): ReturnType<typeof createDefaultEditDoc> {
   return withAdjustment(createDefaultEditDoc(), 'exposure', 10)

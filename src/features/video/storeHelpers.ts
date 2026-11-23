@@ -3,7 +3,7 @@
  * store; the action slices in `storeSlices/*` spread them into `useVideoEditor`.
  */
 
-import { EditHistory } from '../photo/history'
+import { EditHistory } from '../../core/history'
 import { useProjectsStore } from '../projects/store'
 import type { CanvasSettings, MusicTrack, OverlayClip, SequenceLayout, VideoClip, VoiceoverClip } from './sequenceModel'
 import { defaultCanvasSettings, layoutSequence, sanitizeSequence } from './sequenceModel'

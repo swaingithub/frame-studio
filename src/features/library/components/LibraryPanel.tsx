@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import {
   Circle,
   Clapperboard,
@@ -27,7 +27,6 @@ import { useImport } from './useImport'
 import { AssetGrid } from './AssetGrid'
 import { Button } from '../../../ui/button'
 import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog'
-import { MemeDialog } from '../../memes/MemeDialog'
 import { CombineDialog } from '../../photo/components/CombineDialog'
 import { PosterMakerDialog } from '../../photo/components/PosterMakerDialog'
 import { useProjectsStore } from '../../projects/store'
@@ -35,6 +34,8 @@ import { formatBytes } from '../../../core/format'
 import { useStorageEstimate } from '../../../lib/hooks'
 import { useUIStore } from '../../../ui/uiStore'
 import type { ReactNode } from 'react'
+
+const MemeDialogLazy = lazy(() => import('../../memes/MemeDialog').then((m) => ({ default: m.MemeDialog })))
 
 const kinds: Array<{ value: 'all' | AssetKind; label: string; icon: ReactNode }> = [
   { value: 'all', label: 'All', icon: <Circle size={11} /> },
@@ -378,7 +379,11 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
       )}
 
       <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
-      <MemeDialog open={memeOpen} onClose={() => setMemeOpen(false)} />
+      {memeOpen ? (
+        <Suspense fallback={null}>
+          <MemeDialogLazy open onClose={() => setMemeOpen(false)} />
+        </Suspense>
+      ) : null}
       <CombineDialog open={combineOpen} onClose={() => setCombineOpen(false)} />
       <PosterMakerDialog open={posterOpen} onClose={() => setPosterOpen(false)} />
     </div>

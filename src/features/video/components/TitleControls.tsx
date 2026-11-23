@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Type } from 'lucide-react'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { cn } from '../../../lib/cn'
 import { useVideoEditor } from '../store'
 import type { TitlePosition } from '../sequenceModel'

@@ -1,18 +1,21 @@
-import { useMemo, useState } from 'react'
+import { Suspense, lazy, useMemo, useState } from 'react'
 import { PanelRightClose, Sparkles } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { assetsByIds } from '../../../core/projectAssets'
 import { formatBytes, formatDuration } from '../../../core/format'
 import { isDocNeutral } from '../../../core/adjustments/edits'
-import { AdjustPanel } from '../../photo/components/AdjustPanel'
 import { usePhotoEditor } from '../../photo/store'
-import { VideoInspectorBody } from '../../video/components/VideoInspector'
 import { useVideoEditor } from '../../video/store'
 import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
 import type { Histogram } from '../../../core/render/histogram'
 import type { ReactNode } from 'react'
 import { useUIStore } from '../../../ui/uiStore'
+
+// Editor inspector bodies are code-split: they load when the matching
+// workspace opens, not when the shell boots.
+const AdjustPanelLazy = lazy(() => import('../../photo/components/AdjustPanel').then((m) => ({ default: m.AdjustPanel })))
+const VideoInspectorBodyLazy = lazy(() => import('../../video/components/VideoInspector').then((m) => ({ default: m.VideoInspectorBody })))
 
 /**
  * Right-hand inspector. Photo workspace: the live histogram + adjustment
@@ -103,7 +106,9 @@ function PhotoInspectorBody({ simpleMode }: { simpleMode: boolean }): ReactNode 
 
   return (
     <div className="flex flex-col gap-4">
-      <AdjustPanel doc={doc} histogram={histogram} unedited={isDocNeutral(doc)} simpleMode={simpleMode} />
+      <Suspense fallback={null}>
+        <AdjustPanelLazy doc={doc} histogram={histogram} unedited={isDocNeutral(doc)} simpleMode={simpleMode} />
+      </Suspense>
     </div>
   )
 }
@@ -111,7 +116,11 @@ function PhotoInspectorBody({ simpleMode }: { simpleMode: boolean }): ReactNode 
 /** Video mode: Looks + grade + audio + history for the active clip. */
 function VideoInspectorSection({ simpleMode }: { simpleMode: boolean }): ReactNode {
   const histogram = useVideoEditorHistogram()
-  return <VideoInspectorBody histogram={histogram} simpleMode={simpleMode} />
+  return (
+    <Suspense fallback={null}>
+      <VideoInspectorBodyLazy histogram={histogram} simpleMode={simpleMode} />
+    </Suspense>
+  )
 }
 
 function useVideoEditorHistogram(): Histogram | null {

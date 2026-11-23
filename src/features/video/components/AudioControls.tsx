@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { Volume2 } from 'lucide-react'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { useVideoEditor } from '../store'
 import type { VideoEditDoc } from '../model'
 import { Heading } from './InspectorUi'

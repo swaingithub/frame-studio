@@ -1,6 +1,6 @@
 import { useRef, type PointerEvent, type ReactNode } from 'react'
 import { CURVE_INPUTS, evaluateCurve, isIdentityCurve, type CurveKnots, type ToneCurve } from '../../../core/adjustments/color'
-import { AdjustSlider } from './AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { usePhotoEditor } from '../store'
 import { Button } from '../../../ui/button'
 import { cn } from '../../../lib/cn'

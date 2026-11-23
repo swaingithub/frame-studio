@@ -10,7 +10,7 @@ import type { MutableRefObject, PointerEvent } from 'react'
 import { useAssets } from '../../library/useAssets'
 import { useVideoEditor, layoutOf } from '../store'
 import { audioGainAt, videoDocToEditDoc, type VideoEditDoc } from '../model'
-import { ensureSegmenter, segmentSubjectMask } from '../bgRemove'
+import { ensureSegmenter, segmentSubjectMask } from '../../../core/bgRemove'
 import {
   baseAnimAt,
   canvasOutputSize,

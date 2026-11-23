@@ -7,7 +7,7 @@ import {
   type HslChannel,
   type HslMixer,
 } from '../../../core/adjustments/color'
-import { AdjustSlider } from './AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { usePhotoEditor } from '../store'
 import { cn } from '../../../lib/cn'
 

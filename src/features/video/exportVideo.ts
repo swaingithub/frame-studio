@@ -88,19 +88,6 @@ export function seeked(video: HTMLVideoElement, timeoutMs = 4000): Promise<void>
   })
 }
 
-/** Convenience: kicks off a blob download the same way the photo exporter does. */
-export function downloadBlob(blob: Blob, name: string): void {
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  a.addEventListener('click', () => {
-    window.setTimeout(() => URL.revokeObjectURL(url), 4000)
-  })
-  a.click()
-  a.remove()
-}
-
 // ---------------------------------------------------------------------------
 // Audio mixing — one shared AudioContext; MediaElementSource nodes are cached
 // per element (creating them twice throws).

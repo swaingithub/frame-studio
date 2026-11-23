@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { Circle } from 'lucide-react'
 import { cn } from '../../../lib/cn'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { useVideoEditor } from '../store'
 import { MASK_SHAPES, MASK_SHAPE_LABELS, defaultMask, type Mask } from '../../../core/adjustments/edits'
 import { Heading } from './InspectorUi'

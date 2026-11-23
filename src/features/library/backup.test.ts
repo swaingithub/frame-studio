@@ -6,8 +6,8 @@ import { putBlob } from '../../core/db/blobStore'
 import { createProjectDoc } from '../projects/model'
 import { exportProjectBackup, importProjectBackup } from './backup'
 
-vi.mock('../video/exportVideo', () => ({ downloadBlob: vi.fn() }))
-import { downloadBlob } from '../video/exportVideo'
+vi.mock('../../lib/download', () => ({ downloadBlob: vi.fn() }))
+import { downloadBlob } from '../../lib/download'
 
 const lastDownload = (): Blob => {
   const calls = vi.mocked(downloadBlob).mock.calls

@@ -18,7 +18,7 @@ import { getBlob, putBlob } from '../../core/db/blobStore'
 import { newId } from '../../core/id'
 import { normalizeProjectName, sanitizeProject } from '../projects/model'
 import type { MediaAsset, ProjectDoc } from '../../core/db/schema'
-import { downloadBlob } from '../video/exportVideo'
+import { downloadBlob } from '../../lib/download'
 
 export const BACKUP_FORMAT = 'frame-studio-backup'
 export const BACKUP_VERSION = 2

@@ -6,7 +6,8 @@ import { renderEdit } from '../../core/render/pipeline'
 import { newId } from '../../core/id'
 import { type EditDoc } from '../../core/adjustments/edits'
 import { drawPhotoOverlays } from './overlayDraw'
-import { segmentImageBitmap } from '../video/bgRemove'
+import { segmentImageBitmap } from '../../core/bgRemove'
+import { sanitizeFileName } from '../../lib/download'
 
 /**
  * Full-resolution export. Renders source + EditDoc into a fresh canvas at
@@ -61,10 +62,6 @@ function download(blob: Blob, name: string): void {
   })
   a.click()
   a.remove()
-}
-
-export function sanitizeFileName(name: string): string {
-  return name.replace(/\.[a-z0-9]+$/i, '').replace(/[\\/:*?"<>|]+/g, '_')
 }
 
 /**
@@ -159,9 +156,4 @@ export async function toPngBlob(source: TexSource, doc: EditDoc, options: { qual
     baseName: 'clipboard',
   })
   return blob
-}
-
-/** Saves a blob to the user's downloads (used by share fallbacks). */
-export function downloadBlob(blob: Blob, name: string): void {
-  download(blob, name)
 }

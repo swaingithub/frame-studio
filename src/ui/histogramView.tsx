@@ -1,5 +1,5 @@
 import { useId, useMemo, type ReactNode } from 'react'
-import type { Histogram } from '../../../core/render/histogram'
+import type { Histogram } from '../core/render/histogram'
 
 /**
  * RGB + luma histogram rendered to a tiny canvas from precomputed bins.

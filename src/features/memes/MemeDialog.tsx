@@ -3,7 +3,7 @@ import { Button } from '../../ui/button'
 import { Dialog, DialogContent, DialogClose } from '../../ui/dialog'
 import { useAssets, useAssetBlob } from '../library/useAssets'
 import { generateMeme } from './memeGen'
-import { downloadBlob, sanitizeFileName } from '../photo/exportPhoto'
+import { downloadBlob, sanitizeFileName } from '../../lib/download'
 import type { MediaAsset } from '../../core/db/schema'
 
 /**

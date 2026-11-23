@@ -6,7 +6,8 @@
  */
 
 import { useCallback } from 'react'
-import { downloadBlob, exportSequenceName, recordStream } from '../exportVideo'
+import { exportSequenceName, recordStream } from '../exportVideo'
+import { downloadBlob } from '../../../lib/download'
 import { pickWcFormat, recordWebCodecs } from '../webcodecsExport'
 import { layoutOf, useVideoEditor } from '../store'
 import { useCurrentProject } from '../../projects/store'

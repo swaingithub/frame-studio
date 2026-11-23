@@ -6,12 +6,12 @@ import {
   presetValues,
   type AdjustPreset,
   type HistogramStats,
-} from '../../../core/adjustments/presets'
-import type { AdjustValues } from '../../../core/adjustments/registry'
-import { createDefaultEditDoc, withAdjustments } from '../../../core/adjustments/edits'
-import { renderEdit } from '../../../core/render/pipeline'
-import type { TexSource } from '../../../core/render/webgl'
-import { cn } from '../../../lib/cn'
+} from '../core/adjustments/presets'
+import type { AdjustValues } from '../core/adjustments/registry'
+import { createDefaultEditDoc, withAdjustments } from '../core/adjustments/edits'
+import { renderEdit } from '../core/render/pipeline'
+import type { TexSource } from '../core/render/webgl'
+import { cn } from '../lib/cn'
 
 /**
  * One-click looks row: Auto (histogram-driven) plus curated presets.

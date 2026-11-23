@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { ListMusic, Music2, X } from 'lucide-react'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { useAssets, useThumbnail } from '../../library/useAssets'
 import { useVideoEditor } from '../store'
 import { MusicLibraryDialog } from './MusicLibraryDialog'

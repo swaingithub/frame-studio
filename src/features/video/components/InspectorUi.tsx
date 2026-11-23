@@ -1,6 +1,6 @@
 import { Diamond } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { ANIM_DEFAULTS, ANIM_RANGES } from '../sequenceAnim'
 import type { AnimBase } from '../sequenceModel'
 import { cn } from '../../../lib/cn'

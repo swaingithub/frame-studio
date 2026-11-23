@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogClose } from '../../../ui/dialog'
 import { useAssets } from '../../library/useAssets'
 import { WC_CANDIDATES, type WcFormat } from '../webcodecsExport'
 import { convertVideoAsset } from '../convertVideo'
-import { downloadBlob, sanitizeFileName } from '../../photo/exportPhoto'
+import { downloadBlob, sanitizeFileName } from '../../../lib/download'
 import type { MediaAsset } from '../../../core/db/schema'
 
 interface ConvertResult {

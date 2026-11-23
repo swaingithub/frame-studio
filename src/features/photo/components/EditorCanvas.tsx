@@ -10,7 +10,7 @@ import { usePhotoEditor } from '../store'
 import { Button } from '../../../ui/button'
 import { Tooltip } from '../../../ui/tooltip'
 import { cn } from '../../../lib/cn'
-import { segmentImageBitmap } from '../../video/bgRemove'
+import { segmentImageBitmap } from '../../../core/bgRemove'
 import type { MediaAsset } from '../../../core/db/schema'
 
 /**

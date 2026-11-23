@@ -22,7 +22,7 @@ import {
 } from '../../core/adjustments/edits'
 import { defaultHslMixer, defaultToneCurve, type HslBand, type HslChannel, type ToneCurve } from '../../core/adjustments/color'
 import { ADJUSTMENTS_BY_KEY, type AdjustKey, type AdjustValues } from '../../core/adjustments/registry'
-import { EditHistory } from './history'
+import { EditHistory } from '../../core/history'
 import { toast } from '../../ui/toastStore'
 import type { Histogram } from '../../core/render/histogram'
 

@@ -10,18 +10,8 @@ export default defineConfig({
     // bundles carry no `sourceMappingURL` comments, so they aren't fetched
     // by browsers.
     sourcemap: 'hidden',
-    rollupOptions: {
-      output: {
-        // Split the two editors into their own chunks — they're the bulk of
-        // the app, and the shell only needs the chunks of the workspace
-        // being used.
-        manualChunks(id) {
-          if (id.includes('/features/video/')) return 'video'
-          if (id.includes('/features/photo/')) return 'photo'
-          if (id.includes('/features/memes/')) return 'photo'
-        },
-      },
-    },
+    // No forced chunking — the workspace editors are lazy-loaded through
+    // Shell's `lazy()` calls, so each editor gets its own on-demand chunk.
   },
   worker: {
     format: 'es',

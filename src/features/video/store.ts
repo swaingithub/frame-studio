@@ -11,7 +11,7 @@
  */
 
 import { create } from 'zustand'
-import { EditHistory } from '../photo/history'
+import { EditHistory } from '../../core/history'
 import { defaultCanvasSettings } from './sequenceModel'
 import type {
   CanvasSettings,

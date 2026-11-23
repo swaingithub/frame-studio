@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { ArrowDown, ArrowUp, Trash2, Type } from 'lucide-react'
-import { AdjustSlider } from '../../photo/components/AdjustSlider'
+import { AdjustSlider } from '../../../ui/adjustSlider'
 import { useVideoEditor, layoutOf, useInspectorTime } from '../store'
 import { MIN_OVERLAY_OUT, OVERLAY_ANIM_LABELS, OVERLAY_ANIM_PRESETS, type AnimBase, type OverlayAnimPreset, type OverlayClip } from '../sequenceModel'
 import { animAt } from '../sequenceAnim'

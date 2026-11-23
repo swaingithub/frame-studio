@@ -1,4 +1,4 @@
-import type { EditDoc } from '../../core/adjustments/edits'
+import type { EditDoc } from './adjustments/edits'
 
 /**
  * Pure snapshot-history engine. Each committed edit records a before/after
