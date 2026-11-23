@@ -24,7 +24,7 @@ import type {
   VideoTransition,
   VoiceoverClip,
 } from './sequenceModel'
-import type { AnimBase, SpeedCurve } from './sequenceAnim'
+import type { AnimBase, KeyframeSet, SpeedCurve } from './sequenceAnim'
 import type { CaptionSegment } from './captions'
 import type { ChromaKey, Mask } from '../../core/adjustments/edits'
 import type { VideoEditDoc } from './model'
@@ -142,6 +142,8 @@ export interface VideoActions {
   setOverlayText: (id: string, text: string) => void
   /** Sets an overlay's intro/outro motion preset (one undo entry). */
   setOverlayAnim: (id: string, which: 'in' | 'out', preset: OverlayAnimPreset) => void
+  /** Places a panel overlay on a voice and syncs its animation to it (one undo entry). */
+  syncOverlayToVoice: (id: string, voice: { start: number; duration: number }, keyframes: KeyframeSet) => void
   /** Mutes/unmutes a media overlay's own audio (one undo entry). */
   setOverlayMuted: (id: string, muted: boolean) => void
   /** Replaces every auto-caption overlay with `segments` (one undo entry). */

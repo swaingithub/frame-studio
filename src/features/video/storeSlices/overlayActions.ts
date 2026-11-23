@@ -24,6 +24,7 @@ export function overlayActions(
   | 'toggleOverlayKeyframe'
   | 'setOverlayTiming'
   | 'setOverlayAnim'
+  | 'syncOverlayToVoice'
   | 'setOverlayMuted'
   | 'setOverlayText'
 > {
@@ -214,6 +215,22 @@ export function overlayActions(
         : { ...overlay, animOut: preset }
       const overlaysNext = get().overlays.map((o) => (o.id === id ? next : o))
       recordHistory(get, which === 'in' ? 'In animation' : 'Out animation', before, snap(get, { overlays: overlaysNext }))
+      set({ overlays: overlaysNext, revision: get().revision + 1 })
+      persist(get, get().sequence, get().music, get().activeClipId, overlaysNext)
+    },
+
+    syncOverlayToVoice: (id, voice, keyframes) => {
+      const overlay = get().overlays.find((o) => o.id === id)
+      if (!overlay) return
+      const before = snap(get)
+      const next: OverlayClip = {
+        ...overlay,
+        start: Math.max(0, voice.start),
+        duration: Math.max(MIN_OVERLAY_OUT, voice.duration),
+        keyframes,
+      }
+      const overlaysNext = get().overlays.map((o) => (o.id === id ? next : o))
+      recordHistory(get, 'Panel on voice', before, snap(get, { overlays: overlaysNext }))
       set({ overlays: overlaysNext, revision: get().revision + 1 })
       persist(get, get().sequence, get().music, get().activeClipId, overlaysNext)
     },

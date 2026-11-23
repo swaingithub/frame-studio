@@ -25,6 +25,7 @@ import { SpeedControls } from './SpeedControls'
 import { ChromaKeyControls } from './ChromaKeyControls'
 import { ConvertControls } from './ConvertControls'
 import { VoiceoverSection } from './VoiceoverSection'
+import { ManhwaSection } from './ManhwaSection'
 import { BgRemoveControls } from './BgRemoveControls'
 import { MaskControls } from './MaskControls'
 import { TransitionControls } from './TransitionControls'
@@ -174,6 +175,8 @@ export function VideoInspectorBody({ histogram, simpleMode = true }: { histogram
       <BgRemoveControls />
 
       <VoiceoverSection />
+
+      <ManhwaSection />
 
       <TransitionControls transition={clip.transition} duration={clip.transitionDuration} isFirst={isFirstClip} />
 
