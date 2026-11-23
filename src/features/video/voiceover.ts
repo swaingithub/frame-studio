@@ -5,7 +5,7 @@
  * browser. No upload, no API key, no account — like the rest of the app.
  */
 
-import { KokoroTTS, type GenerateOptions } from 'kokoro-js'
+import type { GenerateOptions, KokoroTTS } from 'kokoro-js'
 
 export const KOKORO_MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX'
 
@@ -14,7 +14,10 @@ let ttsInstance: KokoroTTS | null = null
 /** Lazy KokoroTTS singleton — downloads + warms on first use. */
 export async function getKokoroTTS(): Promise<KokoroTTS> {
   if (!ttsInstance) {
-    ttsInstance = await KokoroTTS.from_pretrained(KOKORO_MODEL_ID, {
+    // Dynamic import: kokoro-js (and its ONNX runtime wasm) only load when
+    // a voiceover is actually requested — not with the inspector.
+    const { KokoroTTS: KokoroTTSClass } = await import('kokoro-js')
+    ttsInstance = await KokoroTTSClass.from_pretrained(KOKORO_MODEL_ID, {
       dtype: 'q8',
       device: 'wasm',
     })
