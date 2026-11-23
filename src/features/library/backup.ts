@@ -74,9 +74,10 @@ export async function exportProjectBackup(projectId: string): Promise<void> {
   // already-compressed bytes just wastes CPU), so peak memory is one asset
   // plus the emitted zip bytes instead of every asset in the project.
   const chunks: Uint8Array<ArrayBuffer>[] = []
+  let failure: unknown = null
   const zip = new Zip((err, data) => {
-    if (err) throw err
-    if (data) chunks.push(data)
+    if (err) failure = err
+    else if (data) chunks.push(data)
   })
   const addStored = (name: string, bytes: Uint8Array): void => {
     const entry = new ZipPassThrough(name)
@@ -106,6 +107,7 @@ export async function exportProjectBackup(projectId: string): Promise<void> {
   }
   addStored('manifest.json', new TextEncoder().encode(JSON.stringify(manifest)))
   zip.end()
+  if (failure) throw failure
 
   const name = normalizeProjectName(project.name).replace(/[\\/:*?"<>|]+/g, '_')
   await downloadBlob(new Blob(chunks, { type: 'application/zip' }), `${name}${ZIP_EXT}`)
