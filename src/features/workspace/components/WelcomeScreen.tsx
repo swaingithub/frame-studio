@@ -54,7 +54,7 @@ export function WelcomeScreen(): ReactNode {
             type="button"
             disabled={busy !== null}
             onClick={() => void handleSample()}
-            className="group rounded-2xl border border-accent/40 bg-accent-soft/35 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent hover:shadow-md disabled:opacity-50"
+            className="group rounded-2xl border border-accent/40 bg-accent-soft/35 p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-accent hover:shadow-md disabled:opacity-50"
           >
             <Images size={18} className="mb-2 text-accent" />
             <p className="flex items-center gap-1 text-sm font-semibold text-hi">Learn with a sample <ArrowRight size={13} className="opacity-0 transition-opacity group-hover:opacity-100" /></p>
@@ -64,7 +64,7 @@ export function WelcomeScreen(): ReactNode {
             type="button"
             disabled={busy !== null}
             onClick={() => void handleCreate()}
-            className="group rounded-2xl border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md disabled:opacity-50"
+            className="group rounded-2xl border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-accent/60 hover:shadow-md disabled:opacity-50"
           >
             <FolderPlus size={18} className="mb-2 text-accent" />
             <p className="text-sm font-medium text-hi">Start a project</p>
@@ -73,7 +73,7 @@ export function WelcomeScreen(): ReactNode {
           <button
             type="button"
             onClick={pickFiles}
-            className="group rounded-2xl border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md"
+            className="group rounded-2xl border border-line bg-panel p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 motion-reduce:hover:translate-y-0 hover:border-accent/60 hover:shadow-md"
           >
             <Images size={18} className="mb-2 text-accent" />
             <p className="text-sm font-medium text-hi">Import media</p>

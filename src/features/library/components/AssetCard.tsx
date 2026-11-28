@@ -162,7 +162,7 @@ export const AssetCard = memo(function AssetCard({
         }
       }}
       className={cn(
-        'group relative cursor-pointer overflow-hidden rounded-xl border bg-elevated shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px hover:shadow-md',
+        'group relative cursor-pointer overflow-hidden rounded-xl border bg-elevated shadow-sm transition-[border-color,box-shadow,transform] hover:-translate-y-px motion-reduce:hover:translate-y-0 hover:shadow-md',
         selected ? 'border-accent shadow-[0_0_0_1px_var(--c-accent),0_6px_18px_rgba(56,103,239,0.16)]' : 'border-line/80 hover:border-lo/40',
       )}
     >
