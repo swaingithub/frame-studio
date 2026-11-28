@@ -88,7 +88,7 @@ export function Header({ compact = false, openPanel = null, onTogglePanel }: Hea
 
       <div className="flex shrink-0 items-center gap-0.5">
         <Tooltip content={capabilities.webgl2 ? 'WebGL2 available — full pipeline' : 'WebGL2 unavailable — Canvas 2D fallback'}>
-          <button type="button" className="hidden rounded-md p-1.5 text-lo hover:text-hi md:block" aria-label="Feature support">
+          <button type="button" className="hidden rounded-md p-1.5 text-lo transition-colors hover:text-hi focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 md:block" aria-label="Feature support">
             {capabilities.webgl2 ? (
               <CheckCircle2 size={15} className="text-emerald-500" />
             ) : (

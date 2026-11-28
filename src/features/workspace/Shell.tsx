@@ -95,7 +95,13 @@ export function Shell(): ReactNode {
         ) : null}
 
         {/* Center: active workspace */}
-        <main className="relative flex min-w-0 flex-1 flex-col">
+        <a
+          href="#main-content"
+          className="sr-only z-50 rounded-md bg-panel px-3 py-1.5 text-xs font-medium text-hi shadow-lg focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:outline-none focus:ring-2 focus:ring-accent"
+        >
+          Skip to main content
+        </a>
+        <main id="main-content" tabIndex={-1} className="relative flex min-w-0 flex-1 flex-col outline-none">
           {!loaded ? (
             <div className="flex flex-1 items-center justify-center">
               <div className="w-full max-w-xl animate-pulse space-y-3 p-4 sm:p-8">
