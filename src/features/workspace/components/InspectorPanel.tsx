@@ -7,7 +7,7 @@ import { formatBytes, formatDuration } from '../../../core/format'
 import { isDocNeutral } from '../../../core/adjustments/edits'
 import { usePhotoEditor } from '../../photo/store'
 import { useVideoEditor } from '../../video/store'
-import { useMediaQuery, PHONE_QUERY } from '../../../ui/useMediaQuery'
+import { useMediaQuery, PHONE_QUERY, DESKTOP_QUERY } from '../../../ui/useMediaQuery'
 import type { Histogram } from '../../../core/render/histogram'
 import type { ReactNode } from 'react'
 import { useUIStore } from '../../../ui/uiStore'
@@ -27,6 +27,9 @@ export function InspectorPanel(): ReactNode {
   const assets = useAssets()
   const workspace = project?.activeWorkspace ?? 'photo'
   const toggleRight = useUIStore((s) => s.toggleRight)
+  // Compact layouts render the inspector in a drawer with its own Close panel
+  // button; the inline collapse control only applies to the desktop column.
+  const desktop = useMediaQuery(DESKTOP_QUERY)
 
   const activeId = workspace === 'photo' ? project?.activePhotoId : project?.activeVideoId
   const selectedAsset = useMemo(() => {
@@ -42,7 +45,7 @@ export function InspectorPanel(): ReactNode {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2">
+      <div className={`flex min-h-14 shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2${desktop ? '' : ' pr-9'}`}>
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent-soft"><Sparkles size={14} className="text-accent" /></span>
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold tracking-tight text-hi">Edit your {workspace === 'photo' ? 'photo' : 'video'}</h2>
@@ -67,15 +70,17 @@ export function InspectorPanel(): ReactNode {
             Advanced
           </button>
         </div>
-        <button
-          type="button"
-          aria-label="Collapse inspector"
-          title="Collapse inspector"
-          onClick={toggleRight}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-lo hover:bg-hover hover:text-hi"
-        >
-          <PanelRightClose size={14} />
-        </button>
+        {desktop ? (
+          <button
+            type="button"
+            aria-label="Collapse inspector"
+            title="Collapse inspector"
+            onClick={toggleRight}
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-lo hover:bg-hover hover:text-hi"
+          >
+            <PanelRightClose size={14} />
+          </button>
+        ) : null}
         </div>
       </div>
 

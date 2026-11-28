@@ -214,7 +214,7 @@ export const AssetCard = memo(function AssetCard({
             <button
               type="button"
               aria-label={`Actions for ${asset.name}`}
-              className="rounded p-1 text-lo opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-hi"
+              className="rounded p-1.5 text-lo opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-hi"
               onClick={(e) => e.stopPropagation()}
             >
               <MoreVertical size={14} />
@@ -260,7 +260,7 @@ export const AssetCard = memo(function AssetCard({
             key={n}
             type="button"
             aria-label={`Set rating ${n} for ${asset.name}`}
-            className="rounded-sm p-0.5 text-lo transition-colors hover:text-amber-400 focus-visible:text-amber-400"
+            className="flex h-6 w-6 items-center justify-center rounded-sm text-lo transition-colors hover:text-amber-400 focus-visible:text-amber-400"
             onClick={() => onSetRating(asset.id, asset.rating === n ? 0 : n)}
           >
             <Star size={11} className={asset.rating >= n ? 'fill-amber-400 text-amber-400' : ''} />

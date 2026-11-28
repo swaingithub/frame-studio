@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useCurrentProject, useProjectsStore } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
+import { useImport } from '../../library/components/useImport'
 import { assetsByIds } from '../../../core/projectAssets'
 import { Button } from '../../../ui/button'
-import { Clapperboard, Image as ImageIcon, Info, Trash2 } from 'lucide-react'
+import { Clapperboard, Image as ImageIcon, Info, Trash2, UploadCloud } from 'lucide-react'
 import type { MediaAsset } from '../../../core/db/schema'
 import type { ReactNode } from 'react'
 import { EditorCanvas } from '../../photo/components/EditorCanvas'
@@ -23,6 +24,7 @@ export function PhotoWorkspace(): ReactNode {
   const project = useCurrentProject()
   const assets = useAssets()
   const [manageOpen, setManageOpen] = useState(false)
+  const { pickFiles } = useImport()
   const [exportOpen, setExportOpen] = useState(false)
   const setHistogram = usePhotoEditor((s) => s.setHistogram)
   const updateCurrent = useProjectsStore((s) => s.updateCurrent)
@@ -70,6 +72,9 @@ export function PhotoWorkspace(): ReactNode {
               <p className="mt-1 max-w-80 text-sm text-lo">Add a photo from the Library, then choose a Look and crop it for where you want to share it.</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2 text-[10px] text-lo"><span className="rounded-full bg-elevated px-2.5 py-1">1 · Add a photo</span><span className="rounded-full bg-elevated px-2.5 py-1">2 · Make it yours</span><span className="rounded-full bg-elevated px-2.5 py-1">3 · Export</span></div>
+            <button type="button" onClick={() => void pickFiles()} className="mt-2 inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-onaccent shadow-sm transition hover:brightness-110">
+              <UploadCloud size={15} /> Import a photo
+            </button>
           </div>
         ) : (
           <div className="flex flex-1 items-center justify-center text-sm text-lo">

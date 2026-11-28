@@ -151,7 +151,7 @@ export function Shell(): ReactNode {
       {!desktop && overlayPanel ? (
         <button
           type="button"
-          aria-label="Close panel"
+          aria-label="Close panel background"
           className="fixed inset-x-0 bottom-0 top-[calc(2.75rem+env(safe-area-inset-top))] z-40 cursor-default bg-black/50"
           onClick={() => setOverlayPanel(null)}
         />

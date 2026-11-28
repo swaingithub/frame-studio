@@ -15,6 +15,7 @@ import {
   FolderInput,
   X,
   PanelLeftClose,
+  MoreHorizontal,
 } from 'lucide-react'
 import { cn } from '../../../lib/cn'
 import { type AssetKind, type MediaAsset } from '../../../core/db/schema'
@@ -26,6 +27,7 @@ import { useAssets } from '../useAssets'
 import { useImport } from './useImport'
 import { AssetGrid } from './AssetGrid'
 import { Button } from '../../../ui/button'
+import { Dropdown, DropdownTrigger, DropdownContent, MenuItem } from '../../../ui/dropdown'
 import { ConfirmDialog, type ConfirmRequest } from './ConfirmDialog'
 import { CombineDialog } from '../../photo/components/CombineDialog'
 import { PosterMakerDialog } from '../../photo/components/PosterMakerDialog'
@@ -105,36 +107,42 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
           <Plus size={13} />
           Import
         </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setCombineOpen(true)}
-          title="Combine 2+ photos into one"
-          disabled={(assets?.length ?? 0) === 0 || importing}
-        >
-          <Combine size={13} />
-          Combine
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setPosterOpen(true)}
-          title="Create a poster from a photo"
-          disabled={(assets?.length ?? 0) === 0 || importing}
-        >
-          <LayoutTemplate size={13} />
-          Poster
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => setMemeOpen(true)}
-          title="Generate a meme from a photo"
-          disabled={(assets?.length ?? 0) === 0 || importing}
-        >
-          <Laugh size={13} />
-          Meme
-        </Button>
+        <Dropdown>
+          <DropdownTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              title="More tools"
+              disabled={(assets?.length ?? 0) === 0 || importing}
+            >
+              <MoreHorizontal size={13} />
+              More
+            </Button>
+          </DropdownTrigger>
+          <DropdownContent align="end">
+            <MenuItem
+              onSelect={() => setCombineOpen(true)}
+              icon={<Combine size={13} />}
+              disabled={(assets?.length ?? 0) === 0 || importing}
+            >
+              Combine photos
+            </MenuItem>
+            <MenuItem
+              onSelect={() => setPosterOpen(true)}
+              icon={<LayoutTemplate size={13} />}
+              disabled={(assets?.length ?? 0) === 0 || importing}
+            >
+              Poster
+            </MenuItem>
+            <MenuItem
+              onSelect={() => setMemeOpen(true)}
+              icon={<Laugh size={13} />}
+              disabled={(assets?.length ?? 0) === 0 || importing}
+            >
+              Meme
+            </MenuItem>
+          </DropdownContent>
+        </Dropdown>
         {onClose ? (
           <button
             type="button"
@@ -224,7 +232,7 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
               value={filters.minRating}
               onChange={(e) => filters.patch({ minRating: Number(e.target.value) })}
               aria-label="Minimum rating filter"
-              className="rounded border border-line bg-elevated px-1 py-0.5 text-[11px] text-hi outline-none"
+              className="min-h-6 rounded border border-line bg-elevated px-1 py-0.5 text-[11px] text-hi outline-none"
             >
               {[0, 1, 2, 3, 4, 5].map((n) => (
                 <option key={n} value={n}>
@@ -237,7 +245,7 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
             value={filters.sort}
             onChange={(e) => filters.patch({ sort: e.target.value as LibrarySort })}
             aria-label="Sort order"
-            className="ml-auto rounded border border-line bg-elevated px-1 py-0.5 text-[11px] text-hi outline-none"
+            className="ml-auto min-h-6 rounded border border-line bg-elevated px-1 py-0.5 text-[11px] text-hi outline-none"
           >
             {sorts.map((s) => (
               <option key={s.value} value={s.value}>
@@ -311,23 +319,36 @@ export function LibraryPanel({ onClose }: { onClose?: () => void } = {}): ReactN
           onRemoveFromProject={removeAssetFromCurrent}
           empty={
             <div className="max-w-64 text-center">
-              <ImageIcon size={22} className="mx-auto mb-2 text-lo" />
-              <p className="text-sm font-medium text-hi">
+              <span className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-soft">
+                <ImageIcon size={22} className="text-accent" />
+              </span>
+              <p className="text-sm font-semibold text-hi">
                 {(assets?.length ?? 0) === 0 ? 'Your library is empty' : 'No matches with these filters'}
               </p>
-              <p className="mt-1 text-xs text-lo">
+              <p className="mt-1 text-xs leading-relaxed text-lo">
                 {(assets?.length ?? 0) === 0
-                  ? 'Drop photos, videos, or audio anywhere — everything stays on this device.'
+                  ? 'Drop photos, videos, or audio anywhere — or import them. Everything stays on this device.'
                   : 'Try clearing the search or filters.'}
               </p>
-              {(assets?.length ?? 0) > 0 ? (
-                <button
-                  type="button"
-                  className="mt-3 rounded-lg bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
-                  onClick={() => filters.patch(defaultFilters)}
-                >
-                  Clear filters
-                </button>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {(assets?.length ?? 0) === 0 ? (
+                  <Button size="sm" variant="primary" onClick={pickFiles} disabled={importing}>
+                    <Plus size={13} />
+                    Import media
+                  </Button>
+                ) : null}
+                {(assets?.length ?? 0) > 0 ? (
+                  <button
+                    type="button"
+                    className="rounded-lg bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/20"
+                    onClick={() => filters.patch(defaultFilters)}
+                  >
+                    Clear filters
+                  </button>
+                ) : null}
+              </div>
+              {(assets?.length ?? 0) === 0 ? (
+                <p className="mt-3 text-[10px] text-lo">Tip: press ⌘/Ctrl + I anywhere to import.</p>
               ) : null}
             </div>
           }

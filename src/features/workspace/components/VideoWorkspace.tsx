@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, Clapperboard, Copy, Film, Image as ImageIcon, Music2, Plus, Scissors, Smile, Trash2, UploadCloud, Type as TypeIcon, Blend as BlendIcon, WandSparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { useCurrentProject } from '../../projects/store'
 import { useAssets, useThumbnail } from '../../library/useAssets'
+import { useImport } from '../../library/components/useImport'
 import { formatDuration } from '../../../core/format'
 import { VideoStage } from '../../video/components/VideoStage'
 import { useVideoEditor, layoutOf } from '../../video/store'
@@ -27,6 +28,7 @@ export function VideoWorkspace(): ReactNode {
   void revision
   const phone = useMediaQuery(PHONE_QUERY)
   const [previewCollapsed, setPreviewCollapsed] = useState(false)
+  const { pickFiles } = useImport()
 
   // Adopt/repair the persisted sequence once the project is known.
   useEffect(() => {
@@ -158,7 +160,7 @@ export function VideoWorkspace(): ReactNode {
             <VideoStage previewCollapsed={previewCollapsed} />
           </div>
         ) : (
-          <SelectClipHint hasAssets={(project.videoAssets?.length ?? 0) > 0} />
+          <SelectClipHint hasAssets={(project.videoAssets?.length ?? 0) > 0} onImport={pickFiles} />
         )}
       </div>
 
@@ -222,7 +224,7 @@ function EmptySequence({ addable }: { addable: MediaAsset[] }): ReactNode {
   )
 }
 
-function SelectClipHint({ hasAssets }: { hasAssets: boolean }): ReactNode {
+function SelectClipHint({ hasAssets, onImport }: { hasAssets: boolean; onImport: () => void }): ReactNode {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
       <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft"><Clapperboard size={26} className="text-accent" /></span>
@@ -235,6 +237,11 @@ function SelectClipHint({ hasAssets }: { hasAssets: boolean }): ReactNode {
       </p>
       </div>
       <div className="flex flex-wrap justify-center gap-2 text-[10px] text-lo"><span className="rounded-full bg-elevated px-2.5 py-1">1 · Add clips</span><span className="rounded-full bg-elevated px-2.5 py-1">2 · Edit</span><span className="rounded-full bg-elevated px-2.5 py-1">3 · Export</span></div>
+      {!hasAssets ? (
+        <button type="button" onClick={() => onImport()} className="mt-1 inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-onaccent shadow-sm transition hover:brightness-110">
+          <UploadCloud size={15} /> Import a video
+        </button>
+      ) : null}
       {hasAssets ? (
         <button type="button" onClick={() => useVideoEditor.getState().createYouTubeMontage()} className="mt-1 inline-flex h-10 items-center gap-2 rounded-xl bg-accent px-4 text-sm font-semibold text-onaccent shadow-sm transition hover:brightness-110">
           <WandSparkles size={15} /> Build a YouTube montage
