@@ -101,7 +101,7 @@ export function VideoWorkspace(): ReactNode {
                 key={a.id}
                 type="button"
                 onClick={() => useVideoEditor.getState().addClip(a.id)}
-                className="flex h-7 items-center gap-1.5 rounded-md border border-dashed border-accent/50 px-2 text-[11px] text-hi hover:bg-accent-soft"
+                className="flex h-7 items-center gap-1.5 rounded-md border border-dashed border-accent/50 px-2 text-[11px] text-hi transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 aria-label={`Add ${a.name} to timeline`}
               >
                 <Plus size={11} />
@@ -122,7 +122,7 @@ export function VideoWorkspace(): ReactNode {
           <button
             type="button"
             onClick={() => useVideoEditor.getState().addTextOverlay()}
-            className="sticky left-12 z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-dashed border-accent/50 bg-panel px-2 text-[11px] text-hi shadow-[4px_0_8px_rgba(0,0,0,0.15)] hover:bg-accent-soft"
+            className="sticky left-12 z-10 flex h-8 shrink-0 items-center gap-1 rounded-lg border border-dashed border-accent/50 bg-panel px-2 text-[11px] text-hi shadow-[4px_0_8px_rgba(0,0,0,0.15)] transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
             aria-label="Add text overlay"
           >
             <Plus size={10} />
@@ -137,7 +137,7 @@ export function VideoWorkspace(): ReactNode {
                 key={a.id}
                 type="button"
                 onClick={() => useVideoEditor.getState().addMediaOverlay(a.id, a.kind === 'image' ? 'image' : 'video')}
-                className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-dashed border-accent/50 px-2 text-[11px] text-hi hover:bg-accent-soft"
+                className="flex h-6 shrink-0 items-center gap-1 rounded-md border border-dashed border-accent/50 px-2 text-[11px] text-hi transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
                 aria-label={`Add ${a.name} as overlay`}
               >
                 {a.kind === 'image' ? <ImageIcon size={10} /> : <Film size={10} />}
