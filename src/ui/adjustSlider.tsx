@@ -60,7 +60,7 @@ export function AdjustSlider({ param, value, disabled, onLive, onCommit, onReset
           if (idleTimer.current) window.clearTimeout(idleTimer.current)
           onReset()
         }}
-        className="w-20 shrink-0 cursor-default select-none text-left text-[11px] text-lo hover:text-hi"
+        className="w-20 shrink-0 cursor-default select-none rounded text-left text-[11px] text-lo transition-colors hover:text-hi focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
         {param.label}
       </button>

@@ -70,7 +70,7 @@ function ModeToggle(): ReactNode {
       <button
         type="button"
         aria-pressed={!proMode}
-        className={cn('rounded-md px-2 py-1 text-[11px] font-medium transition-colors', !proMode ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi')}
+        className={cn('min-h-6 rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40', !proMode ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi')}
         onClick={() => setProMode(false)}
       >
         Basic
@@ -78,7 +78,7 @@ function ModeToggle(): ReactNode {
       <button
         type="button"
         aria-pressed={proMode}
-        className={cn('rounded-md px-2 py-1 text-[11px] font-medium transition-colors', proMode ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi')}
+        className={cn('min-h-6 rounded-md px-2 py-1 text-[11px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40', proMode ? 'bg-accent text-onaccent' : 'text-lo hover:text-hi')}
         onClick={() => setProMode(true)}
       >
         Pro

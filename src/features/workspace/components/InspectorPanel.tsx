@@ -57,7 +57,7 @@ export function InspectorPanel(): ReactNode {
             type="button"
             onClick={() => setSimpleMode(true)}
             aria-pressed={simpleMode}
-            className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${simpleMode ? 'bg-panel text-hi shadow-sm' : 'text-lo hover:text-hi'}`}
+            className={`min-h-6 rounded-md px-2 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${simpleMode ? 'bg-panel text-hi shadow-sm' : 'text-lo hover:text-hi'}`}
           >
             Beginner
           </button>
@@ -65,7 +65,7 @@ export function InspectorPanel(): ReactNode {
             type="button"
             onClick={() => setSimpleMode(false)}
             aria-pressed={!simpleMode}
-            className={`rounded-md px-2 py-1 text-[10px] font-medium transition-colors ${!simpleMode ? 'bg-accent text-onaccent shadow-sm' : 'text-lo hover:text-hi'}`}
+            className={`min-h-6 rounded-md px-2 py-1 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 ${!simpleMode ? 'bg-accent text-onaccent shadow-sm' : 'text-lo hover:text-hi'}`}
           >
             Advanced
           </button>
